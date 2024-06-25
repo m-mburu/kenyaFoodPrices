@@ -15,8 +15,10 @@ library(data.table)
 #   read_resource() %>%
 #   setDT()
 
-ke_food_prices <- fread("data_raw/ke_food_prices.csv")
+ke_food_prices <- fread("data-raw/ke_food_prices.csv")
 
 usethis::use_data(ke_food_prices, overwrite = TRUE)
 
 checkhelper::use_data_doc("ke_food_prices")
+
+

@@ -2,9 +2,9 @@
 #'
 #' Description.
 #'
-#' @format A data frame with 16587 rows and 14 variables:
+#' @format A data frame with 10647 rows and 14 variables:
 #' \describe{
-#'   \item{ date }{  Date }
+#'   \item{ date }{  IDate,Date }
 #'   \item{ admin1 }{  character }
 #'   \item{ admin2 }{  character }
 #'   \item{ market }{  character }

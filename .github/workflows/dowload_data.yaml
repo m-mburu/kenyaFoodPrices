@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  analysis_and_commit:
+  Download data, Compile,Commit:
     runs-on: ubuntu-22.04
     env:
       TZ: "Africa/Nairobi"
@@ -40,7 +40,9 @@ jobs:
 
 
     - name: Run R script
-      run: Rscript R/my_dataset.R
+      run: |
+        Rscript data-raw/my_dataset.R
+        Rscript -e "rmarkdown::render('README.Rmd', output_format = 'github_document')"
 
     - name: Build and Check the package
       run: |
