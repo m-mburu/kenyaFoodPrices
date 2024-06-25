@@ -22,7 +22,7 @@ jobs:
     - name: Install system dependencies for tidyverse and devtools
       run: |
         sudo apt-get update
-        sudo apt-get install -y libcurl4-openssl-dev libxml2-dev libssl-dev libicu-dev libblas-dev liblapack-dev zlib1g-dev libudunits2-dev libgdal-dev libgeos-dev libproj-dev
+        sudo apt-get install -y libcurl4-openssl-dev libxml2-dev libssl-dev libicu-dev libblas-dev liblapack-dev zlib1g-dev libudunits2-dev libgdal-dev libgeos-dev libproj-dev  libharfbuzz-dev libfribidi-dev libzmq3-dev libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev build-essential libcurl4-openssl-dev libxml2-dev libssl-dev libfontconfig1-dev
 
     - name: Set up Pandoc
       uses: r-lib/actions/setup-pandoc@v2
@@ -36,7 +36,7 @@ jobs:
       env:
         GITHUB_PAT: ${{secrets.GH_PAT }}
       run: |
-        Rscript -e "install.packages(c('lubridate','ggplot2','dplyr', 'data.table', 'remotes', 'rmarkdown', 'usethis', 'devtools'), repos = 'http://cran.rstudio.com')"
+        Rscript -e "install.packages(c('lubridate','ggplot2','dplyr', 'data.table', 'remotes', 'rmarkdown', 'usethis', 'devtools','checkhelper'), repos = 'http://cran.rstudio.com')"
 
 
     - name: Run R script
