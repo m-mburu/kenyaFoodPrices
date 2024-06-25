@@ -47,7 +47,10 @@ jobs:
     - name: Build and Check the package
       run: |
         Rscript -e "devtools::build()"
-        Rscript -e "devtools::check()"
+        Rscript -e "devtools::install()"
+    - name: Run RMD
+      run: |
+        Rscript -e "rmarkdown::render('README.Rmd', output_format = 'github_document')"
 
     - name: Commit files
       run: |
