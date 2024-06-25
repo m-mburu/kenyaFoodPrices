@@ -42,7 +42,6 @@ jobs:
     - name: Run R script
       run: |
         Rscript data-raw/my_dataset.R
-        Rscript -e "rmarkdown::render('README.Rmd', output_format = 'github_document')"
 
     - name: Build and Check the package
       run: |
