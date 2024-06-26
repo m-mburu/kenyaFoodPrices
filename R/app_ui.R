@@ -4,31 +4,50 @@
 #'     DO NOT REMOVE.
 #' @import shiny
 #' @import data.table
+#' @import leaflet
+#' @import plotly
 #' @noRd
 #'
-choices <- c("Mazda RX4", "Mazda RX4 Wag", "Datsun 710", "Hornet 4 Drive",
-             "Hornet Sportabout", "Valiant", "Duster 360", "Merc 240D", "Merc 230",
-             "Merc 280", "Merc 280C", "Merc 450SE", "Merc 450SL", "Merc 450SLC",
-             "Cadillac Fleetwood", "Lincoln Continental", "Chrysler Imperial",
-             "Fiat 128", "Honda Civic", "Toyota Corolla", "Toyota Corona",
-             "Dodge Challenger", "AMC Javelin", "Camaro Z28", "Pontiac Firebird",
-             "Fiat X1-9", "Porsche 914-2", "Lotus Europa", "Ford Pantera L",
-             "Ferrari Dino", "Maserati Bora", "Volvo 142E")
 
+data("ke_food_prices")
 app_ui <- function(request) {
   tagList(
     golem_add_external_resources(),  # Function for adding external resources
-    fluidPage(
-      sidebarLayout(
-        sidebarPanel(
-          selectInput("selectCar", "Choose a Car:", choices = choices)
-        ),
-        mainPanel(
-          h1("Kenya Food Prices"),
-          dataTableOutput("my_table")
-        )
-      )
+
+    navbarPage(title = "Kenya Food Prices Dashboard",
+               tabPanel("Home",
+                        fluidPage(
+                          titlePanel("Home"),
+                          fluidRow(
+                            column(12,
+                                   wellPanel("Welcome to the Kenya Food Prices Dashboard. This interactive tool allows users to explore food price data across different regions and markets in Kenya. Navigate to other tabs to visualize price trends and geographical distributions.")
+                            )
+                          )
+                        )
+               ),
+               tabPanel("Trend Charts & Bar Graphs",
+                        sidebarLayout(
+                          sidebarPanel(
+                            dateRangeInput("dateRange", "Select Date Range:", start = min(ke_food_prices$date), end = max(ke_food_prices$date)),
+                            selectInput("commodity", "Select Commodity:", choices = unique(ke_food_prices$commodity), selected = unique(ke_food_prices$commodity)[1]),
+                            selectInput("market", "Select Market:", choices = unique(ke_food_prices$market)),
+                            actionButton("update", "Update Graph")
+                          ),
+                          mainPanel(
+                            tabsetPanel(type = "tabs",
+                                        tabPanel("Trend Chart", plotlyOutput("trendPlot")),
+                                        tabPanel("Bar Graph", plotlyOutput("barPlot"))
+                            )
+                          )
+                        )
+               ),
+               tabPanel("Map",
+                        fluidPage(
+                          leafletOutput("map", height = 600)
+                        )
+               )
     )
+
   )
 }
 #' Add external Resources to the Application
