@@ -20,8 +20,14 @@ app_ui <- function(request) {
                           titlePanel("Home"),
                           fluidRow(
                             column(12,
-                                   wellPanel("Welcome to the Kenya Food Prices Dashboard. This interactive tool allows users to explore food price data across different regions and markets in Kenya. Navigate to other tabs to visualize price trends and geographical distributions.")
-                            )
+                                   wellPanel(
+                                     h4("Welcome to the Kenya Food Prices Dashboard!"),
+                                     p("This interactive tool allows users to explore detailed food price data across different regions and markets in Kenya. The data provided here is sourced from the "),
+                                     strong("World Food Programme's Price Database"),
+                                     p(", which is part of their efforts to monitor food prices in different countries and contribute to global food security."),
+                                     p("Navigate to other tabs to visualize price trends, compare prices of different commodities, or view the geographical distribution of food prices."),
+                                     p("This dashboard aims to provide valuable insights for researchers, policymakers, and anyone interested in the dynamics of food markets in Kenya.")
+                                   ))
                           )
                         )
                ),
