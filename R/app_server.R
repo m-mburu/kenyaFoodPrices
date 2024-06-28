@@ -11,38 +11,57 @@
 
 
 
-app_server <- function(input, output, session) {
-  data_subset <- reactive({
-    req(input$dateRange)
-    ke_food_prices %>%
-      filter(date >= input$dateRange[1] & date <= input$dateRange[2],
-             commodity == input$commodity,
-             market %in% input$market)
-  })
+app_server <-  function(input, output, session) {
 
-  output$trendPlot <- renderPlotly({
-    req(data_subset())
-    gg <- ggplot(data_subset(), aes(x = date, y = price, color = market)) +
-      geom_line() +
-      labs(title = paste("Price Trends for", input$commodity), y = "Price (KES)", x = "Date") +
-      theme_minimal()
-    ggplotly(gg)
-  })
+    # Dynamic UI for filters based on previous selections
+    output$commodity_ui <- renderUI({
+      req(input$category)
+      selectInput("commodity", "Commodity:", choices = unique(ke_food_prices[category == input$category]$commodity))
+    })
 
-  output$barPlot <- renderPlotly({
-    req(data_subset())
-    gg <- ggplot(data_subset(), aes(x = commodity, y = price, fill = market)) +
-      geom_bar(stat = "identity", position = position_dodge()) +
-      labs(title = "Comparative Price Bar Chart", y = "Price (KES)", x = "Commodity") +
-      theme_minimal()
-    ggplotly(gg)
-  })
+    output$unit_ui <- renderUI({
+      req(input$commodity)
+      selectInput("unit", "Unit:", choices = unique(ke_food_prices[commodity == input$commodity]$unit))
+    })
 
-  output$map <- renderLeaflet({
-    req(data_subset())
-    m <- leaflet(data_subset()) %>%
-      addTiles() %>%
-      addCircleMarkers(~longitude, ~latitude, radius = 8, fillColor = ~price, color = "#000000", fillOpacity = 0.8, popup = ~paste(market, price, "KES"))
-    m
-  })
-}
+    output$priceflag_ui <- renderUI({
+      req(input$unit)
+      selectInput("priceflag", "Price Flag:", choices = unique(ke_food_prices[unit == input$unit]$priceflag))
+    })
+
+    output$pricetype_ui <- renderUI({
+      req(input$priceflag)
+      selectInput("pricetype", "Price Type:", choices = unique(ke_food_prices[priceflag == input$priceflag]$pricetype))
+    })
+
+
+    filtered_data <- reactive({
+      req(input$category, input$commodity, input$unit, input$priceflag, input$pricetype)
+
+      ke_food_prices[
+        category %in% input$category &
+          commodity %in% input$commodity &
+          unit %in% input$unit &
+          priceflag %in% input$priceflag &
+          pricetype %in% input$pricetype
+      ]
+    })
+
+    # Plot the filtered data
+    output$linePlot <- renderPlotly({
+
+
+      filtered_data <- filtered_data()
+      commodity <- input$commodity
+      pricetype <- input$pricetype
+
+      validate(
+        need(nrow(filtered_data) > 2, "The  data has insufficient rows for meaningful analysis. Please adjust your filters.")
+      )
+      mean_data <- filtered_data[, .(mean_price = mean(price)), by = date]
+
+      line_plot_prices(mean_data, commodity, pricetype, palette = "Set1")
+
+    })
+
+  }

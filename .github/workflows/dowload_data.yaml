@@ -36,7 +36,7 @@ jobs:
       env:
         GITHUB_PAT: ${{secrets.GH_PAT }}
       run: |
-        Rscript -e "install.packages(c('lubridate','leaflet', 'plotly','ggplot2','dplyr', 'data.table', 'remotes', 'rmarkdown', 'usethis', 'devtools','checkhelper', 'golem', 'DT', 'config'), repos = 'http://cran.rstudio.com')"
+        Rscript dev/install_R_packages.R
         Rscript -e "remotes::install_github('dickoa/rhdx')"
 
 
@@ -67,3 +67,4 @@ jobs:
       with:
           github_token: ${{ secrets.GH_PAT}}
           branch: main
+

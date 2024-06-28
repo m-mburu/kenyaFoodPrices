@@ -13,47 +13,39 @@ data("ke_food_prices")
 app_ui <- function(request) {
   tagList(
     golem_add_external_resources(),  # Function for adding external resources
+    navbarPage(
+      "Kenya Food Prices Dashboard",
 
-    navbarPage(title = "Kenya Food Prices Dashboard",
-               tabPanel("Home",
-                        fluidPage(
-                          titlePanel("Home"),
-                          fluidRow(
-                            column(12,
-                                   wellPanel(
-                                     h4("Welcome to the Kenya Food Prices Dashboard!"),
-                                     p("This interactive tool allows users to explore detailed food price data across different regions and markets in Kenya. The data provided here is sourced from the "),
-                                     strong("World Food Programme's Price Database"),
-                                     p(", which is part of their efforts to monitor food prices in different countries and contribute to global food security."),
-                                     p("Navigate to other tabs to visualize price trends, compare prices of different commodities, or view the geographical distribution of food prices."),
-                                     p("This dashboard aims to provide valuable insights for researchers, policymakers, and anyone interested in the dynamics of food markets in Kenya.")
-                                   ))
-                          )
-                        )
-               ),
-               tabPanel("Trend Charts & Bar Graphs",
-                        sidebarLayout(
-                          sidebarPanel(
-                            dateRangeInput("dateRange", "Select Date Range:", start = min(ke_food_prices$date), end = max(ke_food_prices$date)),
-                            selectInput("commodity", "Select Commodity:", choices = unique(ke_food_prices$commodity), selected = unique(ke_food_prices$commodity)[1]),
-                            selectInput("market", "Select Market:", choices = unique(ke_food_prices$market)),
-                            actionButton("update", "Update Graph")
-                          ),
-                          mainPanel(
-                            tabsetPanel(type = "tabs",
-                                        tabPanel("Trend Chart", plotlyOutput("trendPlot")),
-                                        tabPanel("Bar Graph", plotlyOutput("barPlot"))
-                            )
-                          )
-                        )
-               ),
-               tabPanel("Map",
-                        fluidPage(
-                          leafletOutput("map", height = 600)
-                        )
-               )
+      tabPanel(
+        "Latest Prices",
+        fluidPage(
+          h4("Additional Analysis"),
+          p("This section can include additional graphs, tables, or other analyses.")
+          # Add additional UI elements for the second tab here
+        )
+      ),
+
+      tabPanel(
+        "Trends Over Time",
+        fluidPage(
+          generate_welcome_message(),
+
+          fluidRow(
+            column(2, selectInput("category", "Category:", choices = unique(ke_food_prices$category))),
+            column(2, uiOutput("commodity_ui")),
+            column(2, uiOutput("unit_ui")),
+            column(2, uiOutput("priceflag_ui")),
+            column(2, uiOutput("pricetype_ui"))
+          ),
+
+          fluidRow(
+            column(12, plotlyOutput("linePlot"))
+          )
+        )
+      )
+
+
     )
-
   )
 }
 #' Add external Resources to the Application

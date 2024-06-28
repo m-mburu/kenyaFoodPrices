@@ -25,26 +25,21 @@ library(kenyaFoodPrices)
 library(ggplot2)
 library(dplyr)
 library(data.table)
+library(ggthemes)
 data(ke_food_prices)
-nairobi <- ke_food_prices[admin2 == "Nairobi" & pricetype == "Wholesale",]
 
-admin2_select <- c("Nairobi", "Mombasa", "Nakuru", "Kisumu", "Eldoret")
 
-nmk_counties <- ke_food_prices[admin2 %in% admin2_select]
+ke_food_prices_maize <- ke_food_prices[commodity == "Maize (white)" & pricetype == "Retail",]
 
-# commodotiy Maize filter
-nmk_counties_maize <- nmk_counties[commodity == "Maize" & pricetype == "Wholesale",]
-
-## group by date and get the mean price
-nmk_counties_maize[, .(mean_price = mean(price)), by = .(date, admin2)] %>%
-    ggplot(aes(x = date, y = mean_price, color = admin2)) +
-    geom_line() +
-    labs(title = "Maize Prices in select Kenyan Towns",
-         x = "Date",
-         y = "Mean Price") +
-    scale_x_date(date_labels = "%Y-%m", breaks = "24 month") +
-    theme_minimal()+
-    theme(legend.position = "bottom")
+ke_food_prices_maize[, .(mean_price = mean(price)), by = .(date)] %>%
+  ggplot(aes(x = date, y = mean_price)) +
+  geom_line(, color = "steelblue") +
+  labs(title = "1KG of Maize Price in Kenya",
+       x = "Date",
+       y = "Mean Price") +
+  scale_x_date(date_labels = "%m/%y", breaks = "24 month") +
+ theme_hc()+
+  theme(legend.position = "bottom")
 ```
 
 <img src="man/figures/README-unnamed-chunk-2-1.png" width="100%" />
@@ -60,9 +55,6 @@ library(lubridate)
 #> The following objects are masked from 'package:base':
 #> 
 #>     date, intersect, setdiff, union
-```
-
-``` r
 
 # Function to display the current time in a specific timezone
 display_time_in_timezone <- function(timezone) {
@@ -82,8 +74,8 @@ display_time_in_timezone <- function(timezone) {
 
 # Example usage of the function
 display_time_in_timezone("Africa/Nairobi")
-#> Last Run On (Your System Timezone): 2024-06-28 00:38:34 UTC
-#> Last Run On (Specified Timezone): 2024-06-28 03:38:34 Africa/Nairobi
+#> Last Run On (Your System Timezone): 2024-06-28 05:47:55 Africa/Nairobi
+#> Last Run On (Specified Timezone): 2024-06-28 05:47:55 Africa/Nairobi
 ```
 
 - **Thanks to WFP for providing the data on Humanitarian Data Exchange
