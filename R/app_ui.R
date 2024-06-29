@@ -14,6 +14,14 @@ data("ke_food_prices")
 ke_food_prices[, year_month := format(date, "%Y-%m")]
 ke_food_prices[, year_month_date := as.Date(paste(year_month, "-01", sep = ""))]
 ke_food_prices[, year := format(date, "%Y")]
+ke_food_prices[, month := format(date, "%b")]
+
+months_levels <- c("Jan", "Feb", "Mar",
+                   "Apr", "May", "Jun",
+                   "Jul", "Aug", "Sep",
+                   "Oct", "Nov", "Dec")
+
+ke_food_prices[, month := factor(month, levels = months_levels)]
 ke_food_prices[, quarter := quarter(date)]
 ke_food_prices[, year_quarter := paste(year, quarter, sep = "-")]
 
@@ -43,6 +51,15 @@ app_ui <- function(request) {
           fluidRow(
             column(6, plotlyOutput("linePlot")),
             column(6, plotlyOutput("main_price_histogram"))
+          ),
+          ## UI output for year
+          fluidRow(
+            column(4, uiOutput("page_year_ui"))
+          ),
+
+          fluidRow(
+            column(6, plotlyOutput("price_quarter_means")),
+            column(6, plotlyOutput("price_month_means"))
           )
         )
       ),
