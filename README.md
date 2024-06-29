@@ -77,8 +77,8 @@ display_time_in_timezone <- function(timezone) {
 
 # Example usage of the function
 display_time_in_timezone("Africa/Nairobi")
-#> Last Run On (Your System Timezone): 2024-06-29 10:13:19 UTC
-#> Last Run On (Specified Timezone): 2024-06-29 13:13:19 Africa/Nairobi
+#> Last Run On (Your System Timezone): 2024-06-29 11:11:23 UTC
+#> Last Run On (Specified Timezone): 2024-06-29 14:11:23 Africa/Nairobi
 ```
 
 - **Thanks to WFP for providing the data on Humanitarian Data Exchange
