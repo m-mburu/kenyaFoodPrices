@@ -10,20 +10,21 @@
 #'
 
 data("ke_food_prices")
+
+ke_food_prices[, year_month := format(date, "%Y-%m")]
+ke_food_prices[, year_month_date := as.Date(paste(year_month, "-01", sep = ""))]
+ke_food_prices[, year := format(date, "%Y")]
+ke_food_prices[, quarter := quarter(date)]
+ke_food_prices[, year_quarter := paste(year, quarter, sep = "-")]
+
+ke_food_prices[, year_quarter_date := median(date), by = .(year_quarter)]
+
+
 app_ui <- function(request) {
   tagList(
     golem_add_external_resources(),  # Function for adding external resources
     navbarPage(
       "Kenya Food Prices Dashboard",
-
-      tabPanel(
-        "Latest Prices",
-        fluidPage(
-          h4("Additional Analysis"),
-          p("This section can include additional graphs, tables, or other analyses.")
-          # Add additional UI elements for the second tab here
-        )
-      ),
 
       tabPanel(
         "Trends Over Time",
@@ -35,12 +36,23 @@ app_ui <- function(request) {
             column(2, uiOutput("commodity_ui")),
             column(2, uiOutput("unit_ui")),
             column(2, uiOutput("priceflag_ui")),
-            column(2, uiOutput("pricetype_ui"))
+            column(2, uiOutput("pricetype_ui")),
+            column(2,selectInput("Currency", "Currency", c("KES" = "price", "USD" ="usdprice" )))
           ),
 
           fluidRow(
-            column(12, plotlyOutput("linePlot"))
+            column(6, plotlyOutput("linePlot")),
+            column(6, plotlyOutput("main_price_histogram"))
           )
+        )
+      ),
+
+      tabPanel(
+        "Latest Prices",
+        fluidPage(
+          h4("Additional Analysis"),
+          p("This section can include additional graphs, tables, or other analyses.")
+          # Add additional UI elements for the second tab here
         )
       )
 

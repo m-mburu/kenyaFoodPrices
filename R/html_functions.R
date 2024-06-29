@@ -29,7 +29,7 @@ generate_welcome_message <- function() {
 line_plot_prices <- function(mean_prices, commodity, pricetype, palette = "Set1") {
 
   # Create the line plot
-  p <- ggplot(mean_prices, aes(x = date, y = mean_price)) +
+  p <- ggplot(mean_prices, aes(x = year_quarter_date, y = mean_price)) +
     geom_line(color = "steelblue") +
     labs(
       title = paste("Price of", commodity, "in Kenya (", pricetype, ")", sep = " "),
@@ -37,10 +37,11 @@ line_plot_prices <- function(mean_prices, commodity, pricetype, palette = "Set1"
       y = "Mean Price"
     ) +
     scale_color_brewer(palette = palette, type = "qual") +
-    scale_x_date(date_labels = "%m/%y") +#breaks = "24 month"
+    scale_x_date(date_labels = "%m/%y", breaks = "24 month") +
     theme_minimal() +
     theme(legend.position = "bottom")
 
   # Convert the ggplot object to a ggplotly object
   ggplotly(p)
 }
+

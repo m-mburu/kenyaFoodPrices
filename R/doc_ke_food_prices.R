@@ -2,7 +2,7 @@
 #'
 #' Description.
 #'
-#' @format A data frame with 10647 rows and 14 variables:
+#' @format A data frame with 16587 rows and 15 variables:
 #' \describe{
 #'   \item{ date }{  Date }
 #'   \item{ admin1 }{  character }
@@ -18,6 +18,7 @@
 #'   \item{ currency }{  character }
 #'   \item{ price }{  numeric }
 #'   \item{ usdprice }{  numeric }
+#'   \item{ unique_id }{  integer }
 #' }
 #' @source Source
 "ke_food_prices"

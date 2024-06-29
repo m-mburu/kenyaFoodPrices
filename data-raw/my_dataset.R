@@ -16,11 +16,6 @@ ke_food_prices <- pull_dataset("wfp-food-prices-for-kenya") %>%
   setDT()
 
 
-usethis::use_data(ke_food_prices, overwrite = TRUE)
-
-checkhelper::use_data_doc("ke_food_prices")
-
-load("data-raw/kenya_counties.rda")
 
 
 # Function to create unique identifiers for GPS coordinates
@@ -38,6 +33,12 @@ create_unique_ids <- function(data) {
 }
 
 ke_food_prices <- create_unique_ids(ke_food_prices)
+
+usethis::use_data(ke_food_prices, overwrite = TRUE)
+
+checkhelper::use_data_doc("ke_food_prices")
+
+load("data-raw/kenya_counties.rda")
 
 library(sf)
 
