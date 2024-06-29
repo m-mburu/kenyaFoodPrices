@@ -68,3 +68,16 @@ jobs:
           github_token: ${{ secrets.GH_PAT}}
           branch: main
 
+    - name: Install kenyaFoodPrices package
+      env:
+        GITHUB_PAT: ${{secrets.GH_PAT }}
+      run: |
+        Rscript -e "remotes::install_github('m-mburu/kenyaFoodPrices')"
+
+    - name: Deploy Shiny App
+      env:
+        RS_CONNECT_TOKEN: ${{ secrets.RS_CONNECT_TOKEN }}
+        RS_CONNECT_SECRET: ${{ secrets.RS_CONNECT_SECRET }}
+      run: Rscript dev/deploy.R
+  
+

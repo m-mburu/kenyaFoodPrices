@@ -5,6 +5,6 @@ account: mmburu
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 12247462
-bundleId:
+bundleId: 8803171
 url: https://mmburu.shinyapps.io/kenyaFoodPrices/
 version: 1
