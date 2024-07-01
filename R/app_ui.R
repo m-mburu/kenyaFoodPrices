@@ -31,10 +31,11 @@ app_ui <- function(request) {
             column(2, uiOutput("pricetype_ui")),
             column(2,selectInput("Currency", "Currency", c("KES" = "price", "USD" ="usdprice" )))
           ),
+          br(),
 
           fluidRow(
-            column(4, uiOutput("page_year_ui")),
-            column(4, uiOutput("page1_county_ui"))
+            column(2, uiOutput("page_year_ui")),
+            column(2, uiOutput("page1_county_ui"))
           ),
 
 

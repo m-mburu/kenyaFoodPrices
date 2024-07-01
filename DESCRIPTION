@@ -19,6 +19,7 @@ Imports:
     leaflet,
     lubridate,
     plotly,
+    scales,
     shiny (>= 1.8.1.1)
 Suggests: 
     knitr,

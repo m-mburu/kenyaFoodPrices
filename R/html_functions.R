@@ -26,17 +26,17 @@ generate_welcome_message <- function() {
 #' @importFrom plotly ggplotly
 #' @return A plotly object containing the line plot.
 #' @export
-line_plot_prices <- function(mean_prices, commodity, pricetype, palette = "Set1") {
+line_plot_prices <- function(mean_prices, commodity, pricetype) {
 
   # Create the line plot
   p <- ggplot(mean_prices, aes(x = year_quarter_date, y = mean_price)) +
-    geom_line(color = "steelblue") +
+    geom_line(color = "#2D708EFF" ) +
     labs(
       title = paste("Price of", commodity, "in Kenya (", pricetype, ")", sep = " "),
       x = "Date",
       y = "Mean Price"
     ) +
-    scale_color_brewer(palette = palette, type = "qual") +
+    #scale_color_brewer(palette = palette, type = "qual") +
     scale_x_date(date_labels = "%m/%y", breaks = "24 month") +
     theme_minimal() +
     theme(legend.position = "bottom")
@@ -73,3 +73,96 @@ display_time_in_timezone <- function(timezone) {
   # Print the result
   cat(output_message)
 }
+
+
+
+#' Sample Colors from the Viridis Palette
+#'
+#' This function randomly samples 'n' colors from the Viridis color palette,
+#' which is designed to be perceptually uniform (in terms of human vision),
+#' both in regular and colorblind vision. The palette generated includes 12 distinct colors.
+#'
+#' @importFrom scales viridis_pal
+#' @param n The number of colors to sample from the palette.
+#' @return A character vector of hexadecimal color values.
+#' @examples
+#' mycolors()  # Sample and print a single color from the Viridis palette
+#' mycolors(5) # Sample and print five colors from the Viridis palette
+#' @export
+#'
+mycolors <- function(n = 12){
+  # Generate the full Viridis palette with 12 distinct colors
+  full_palette <- viridis_pal()(12)
+
+  # Sample 'n' colors from the generated palette
+  sampled_colors <- sample(full_palette, size = n, replace = FALSE)
+
+  return(sampled_colors)
+}
+
+
+#' Generate a Bar Plot for Time-Based Data Aggregations
+#'
+#' This function creates a bar plot for given dataframe, aggregated by time periods
+#' such as months or quarters, using ggplot2 and optionally converts it to a
+#' plotly object for interactivity.
+#'
+#' @importFrom ggplot2 ggplot aes_string geom_bar labs scale_fill_manual theme theme_minimal
+#' @importFrom plotly ggplotly
+#' @param df Data frame containing the data to plot.
+#' @param time_var Name of the column in df that contains the time variable (e.g., "month" or "quarter").
+#' @param price_var Name of the column in df that contains the price variable.
+#' @param commodity Name of the commodity (for title generation).
+#' @param pricetype Type of the price (for title generation).
+#' @param interactive Logical, whether to convert the plot to an interactive plotly plot.
+#' @param mytitle Title for the plot.
+#' @param x_lab Label for the x-axis.
+#' @param y_lab Label for the y-axis.
+#' @return A ggplot or plotly object, depending on the 'interactive' flag.
+#' @export
+bar_plot_time <- function(df,
+                          time_var,
+                          price_var,
+                          commodity,
+                          pricetype,
+                          interactive = TRUE,
+                          mytitle =  "Mean Price per Month for",
+                          x_lab = "Month",
+                          y_lab = "Mean Price") {
+  mytitle <- paste(mytitle, commodity,  pricetype)
+  # Create the ggplot object
+  p <- ggplot(df, aes(x = {{time_var}}, y = {{price_var}}, fill = {{time_var}})) +
+    geom_bar(stat = "identity", width = .5) +
+    labs(
+      title =mytitle,
+      x =x_lab,
+      y =y_lab
+    ) +
+    scale_fill_manual(values =mycolors(n=12) ) +
+    theme_minimal() +
+    theme(legend.position = "none")
+
+  # Convert to plotly if interactive is TRUE
+  if (interactive) {
+    p <- ggplotly(p)
+  }
+
+  return(p)
+}
+
+# library(ggplot2)
+# library(data.table)
+# iris <- iris
+#
+# setDT(iris)
+#
+# df <- iris[, .(mean_sepal_length = mean(Sepal.Length)), by = Species]
+#
+# bar_plot <- function(df, x, y, title, xlab, ylab) {
+#
+#   ggplot(data = df, aes(x = {{x}}, y = {{y}})) +
+#     geom_bar(stat = "identity") +
+#     labs(title = title, x = xlab, y = ylab)
+# }
+#
+# bar_plot(df, Species, mean_sepal_length, "Mean Sepal Length by Species", "Species", "Mean Sepal Length")

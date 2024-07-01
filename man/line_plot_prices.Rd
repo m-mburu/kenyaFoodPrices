@@ -4,16 +4,16 @@
 \alias{line_plot_prices}
 \title{Line Plot Prices}
 \usage{
-line_plot_prices(mean_prices, commodity, pricetype, palette = "Set1")
+line_plot_prices(mean_prices, commodity, pricetype)
 }
 \arguments{
 \item{commodity}{The commodity to filter the data by.}
 
 \item{pricetype}{The price type to filter the data by.}
 
-\item{palette}{The color palette to use for the plot. Default is "Set1".}
-
 \item{data}{A data.table containing the food price data.}
+
+\item{palette}{The color palette to use for the plot. Default is "Set1".}
 }
 \value{
 A plotly object containing the line plot.

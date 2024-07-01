@@ -13,54 +13,91 @@
 
 app_server <-  function(input, output, session) {
 
+
   output$category_ui <- renderUI({
+
     selectInput("category", "Category:", choices = unique(ke_food_prices$category))
   })
 
   output$commodity_ui <- renderUI({
-    req(input$category)
+    #req(input$category)
     commodity_filtered <- ke_food_prices[ke_food_prices$category == input$category, ]
     selectInput("commodity", "Commodity:", choices = unique(commodity_filtered$commodity))
   })
 
   output$unit_ui <- renderUI({
 
-    req(input$category, input$commodity)
-    unit_filtered <- ke_food_prices[ke_food_prices$category == input$category & ke_food_prices$commodity == input$commodity, ]
+    #req(input$category, input$commodity)
+
+    unit_filtered <- ke_food_prices[category == input$category &
+                                      commodity == input$commodity, ]
+
     selectInput("unit", "Unit:", choices = unique(unit_filtered$unit))
 
   })
 
   output$priceflag_ui <- renderUI({
-    req(input$category, input$commodity, input$unit)
-    priceflag_filtered <- ke_food_prices[ke_food_prices$category == input$category & ke_food_prices$commodity == input$commodity & ke_food_prices$unit == input$unit, ]
-    selectInput("priceflag", "Price Flag:", choices = unique(priceflag_filtered$priceflag))
+
+    #req(input$category, input$commodity, input$unit)
+    priceflag_filtered <- ke_food_prices[category == input$category &
+                                           commodity == input$commodity &
+                                           unit == input$unit, ]
+
+    selectInput("priceflag", "Price Flag:",
+                choices = unique(priceflag_filtered$priceflag))
   })
 
   output$pricetype_ui <- renderUI({
-    req(input$category, input$commodity, input$unit, input$priceflag)
-    pricetype_filtered <- ke_food_prices[ke_food_prices$category == input$category & ke_food_prices$commodity == input$commodity & ke_food_prices$unit == input$unit & ke_food_prices$priceflag == input$priceflag, ]
-    selectInput("pricetype", "Price Type:", choices = unique(pricetype_filtered$pricetype))
+   # req(input$category, input$commodity, input$unit, input$priceflag)
+
+    pricetype_filtered <- ke_food_prices[category == input$category &
+                                           commodity == input$commodity &
+                                           unit == input$unit &
+                                           priceflag == input$priceflag, ]
+
+    selectInput("pricetype", "Price Type:",
+                choices = unique(pricetype_filtered$pricetype))
   })
 
   output$page_year_ui <- renderUI({
-    year_filtered <- ke_food_prices[category == input$category & commodity == input$commodity & unit == input$unit & priceflag == input$priceflag & pricetype == input$pricetype, ]
-    choices <-  unique(year_filtered$year)
-    selectInput("page1_year", "Year:", choices = choices, multiple = TRUE, selected = choices)
+
+    year_filtered <- ke_food_prices[category == input$category &
+                                      commodity == input$commodity &
+                                      unit == input$unit &
+                                      priceflag == input$priceflag &
+                                      pricetype == input$pricetype, ]
+
+    min_date <- min(year_filtered$date, na.rm = TRUE)
+    max_date <- max(year_filtered$date, na.rm = TRUE)
+
+    dateRangeInput("page1_date", "Date Range:",
+                   start = min_date, end = max_date,
+                   min = min_date, max = max_date)
 
   })
 
   output$page1_county_ui <- renderUI({
-    county_filtered <- ke_food_prices[category == input$category & commodity == input$commodity & unit == input$unit & priceflag == input$priceflag & pricetype == input$pricetype & year %in% input$page1_year, ]
+    county_filtered <- ke_food_prices[category == input$category &
+                                        commodity == input$commodity &
+                                        unit == input$unit &
+                                        priceflag == input$priceflag &
+                                        pricetype == input$pricetype &
+                                        data.table::between(date, input$page1_date[1], input$page1_date[2]) ]
+
+
     choices <-  c("All", unique(county_filtered$county))
-    selectInput("page1_county", "County:", choices = choices, multiple = FALSE, selected = "All")
+    selectInput("page1_county", "County:",
+                choices = choices, multiple = FALSE,
+                selected = "All")
   })
 
 
   filtered_data <- reactive({
     #req(input$category, input$commodity, input$unit, input$priceflag, input$pricetype)
 
-    by_vec <- c("year_month_date","year_month", input$category, input$commodity, input$unit, input$pricetype)
+    by_vec <- c("year_month_date","year_month",
+                input$category, input$commodity,
+                input$unit, input$pricetype)
 
 
 
@@ -70,10 +107,11 @@ app_server <-  function(input, output, session) {
         unit %in% input$unit &
         priceflag %in% input$priceflag &
         pricetype %in% input$pricetype &
-        year %in% input$page1_year
+        data.table::between(date, input$page1_date[1], input$page1_date[2])
     ]
 
     if(input$page1_county != "All"){
+
       filteredd_data <- filteredd_data[county %in% input$page1_county]
     }
 
@@ -107,7 +145,7 @@ app_server <-  function(input, output, session) {
     price_val <-currency()
     mean_data <- filtered_data[, .(mean_price = mean(get(price_val))), by = year_quarter_date]
 
-    line_plot_prices(mean_data, commodity, pricetype, palette = "Set1")
+    line_plot_prices(mean_data, commodity, pricetype)
 
   })
 
@@ -140,15 +178,15 @@ app_server <-  function(input, output, session) {
                              labels = c("Q1", "Q2", "Q3", "Q4"))]
 
 
-    bar_plot <- ggplot(df_q, aes(x = quarter, y = mean_price, fill = quarter)) +
-      geom_bar(stat = "identity") +
-      labs(title = paste("Mean Price per Quarter for", input$commodity, input$pricetype),
-           x = "Quarter",
-           y = "Mean Price") +
-      scale_fill_viridis_d()+
-      theme_minimal()+
-      theme(legend.position = "none")
-    ggplotly(bar_plot)
+    bar_plot_time(df_q,
+                  time_var = quarter,
+                  price_var = mean_price,
+                  input$commodity,
+                  input$pricetype,
+                  mytitle = "Average Prices by Quarter",
+                  x_lab = "Quarter",
+                  y_lab = "Price")
+
 
   })
 
@@ -158,16 +196,14 @@ app_server <-  function(input, output, session) {
 
     df_m <- filtered_data()[, .(mean_price = mean(get(price_val))),
                             by = .(month)]
-
-    month_plot <- ggplot(df_m, aes(x = month, y = mean_price, fill = month)) +
-      geom_bar(stat = "identity") +
-      labs(title = paste("Mean Price per Month for", input$commodity, input$pricetype),
-           x = "Month",
-           y = "Mean Price") +
-      scale_fill_viridis_d()+
-      theme_minimal()+
-      theme(legend.position = "none")
-
+    bar_plot_time(df_m,
+                  time_var = month,
+                  price_var = mean_price,
+                  input$commodity,
+                  input$pricetype,
+                  mytitle = "Average Prices by Month",
+                  x_lab = "Month",
+                  y_lab = "Price")
 
   })
 
