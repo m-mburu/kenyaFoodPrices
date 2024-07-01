@@ -95,7 +95,7 @@ app_server <-  function(input, output, session) {
 
 
   filtered_data <- reactive({
-    #req(input$category, input$commodity, input$unit, input$priceflag, input$pricetype)
+    req(input$category, input$commodity, input$unit, input$priceflag, input$pricetype, input$page1_date, input$page1_county)
 
     by_vec <- c("year_month_date","year_month",
                 input$category, input$commodity,
