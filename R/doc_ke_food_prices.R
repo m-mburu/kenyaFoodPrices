@@ -2,7 +2,7 @@
 #'
 #' Description.
 #'
-#' @format A data frame with 16587 rows and 22 variables:
+#' @format A data frame with 10647 rows and 22 variables:
 #' \describe{
 #'   \item{ date }{  Date }
 #'   \item{ admin1 }{  character }
