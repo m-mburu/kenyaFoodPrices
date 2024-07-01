@@ -4,7 +4,7 @@
 #'
 #' @format A data frame with 47 rows and 8 variables:
 #' \describe{
-#'   \item{ county }{  factor }
+#'   \item{ county }{  character }
 #'   \item{ population }{  factor }
 #'   \item{ area }{  numeric }
 #'   \item{ pd }{  numeric }

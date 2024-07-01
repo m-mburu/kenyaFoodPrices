@@ -19,7 +19,7 @@ knitr::opts_chunk$set(
 [![R-CMD-check](https://github.com/m-mburu/kenyaFoodPrices/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/m-mburu/kenyaFoodPrices/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
-This is a package to visualize food prices in Kenya. The data is sourced from the World Food Programme (WFP) and is available on the Humanitarian Data Exchange (HDX) platform. The app is hosted on shinyapps.io and can be accessed [here](https://mmburu.shinyapps.io/kenyaFoodPrices/).
+This is a package to visualize food prices in Kenya. The data is sourced from the World Food Programme (WFP) and is available on the [Humanitarian Data Exchange (HDX) platform](https://data.humdata.org/dataset/wfp-food-prices-for-kenya?). The app is hosted on shinyapps.io and can be accessed [here](https://mmburu.shinyapps.io/kenyaFoodPrices/).
 
 ## Installation
 

@@ -51,9 +51,6 @@ ke_food_prices[, year_quarter_date := median(date), by = .(year_quarter)]
 
 ke_food_prices <- create_unique_ids(ke_food_prices)
 
-usethis::use_data(ke_food_prices, overwrite = TRUE)
-
-checkhelper::use_data_doc("ke_food_prices")
 
 
 
@@ -81,12 +78,20 @@ assign_counties <- function(data_points, counties_sf) {
   return(result)
 }
 
+kenya_counties[, county := stringr::str_to_title(county)]
+
 kenya_counties_ids <- assign_counties(ke_food_prices, kenya_counties)
 
 setDT(kenya_counties_ids)
 
 #delete geometry column
 kenya_counties_ids[, geometry := NULL]
+
+#stop("check data")
+ke_food_prices <- merge(ke_food_prices, kenya_counties_ids, by = "unique_id", all.x = TRUE)
+usethis::use_data(ke_food_prices, overwrite = TRUE)
+
+checkhelper::use_data_doc("ke_food_prices")
 
 
 usethis::use_data(kenya_counties_ids, overwrite = TRUE)

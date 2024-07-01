@@ -7,7 +7,7 @@
 \format{
 A data frame with 62 rows and 2 variables:
 \describe{
-  \item{ county }{  factor }
+  \item{ county }{  character }
   \item{ unique_id }{  integer }
 }
 }

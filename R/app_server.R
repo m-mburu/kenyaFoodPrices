@@ -13,32 +13,6 @@
 
 app_server <-  function(input, output, session) {
 
-  filtered_data <- reactive({
-    #req(input$category, input$commodity, input$unit, input$priceflag, input$pricetype)
-
-    by_vec <- c("year_month_date","year_month", input$category, input$commodity, input$unit, input$pricetype)
-
-
-
-    filteredd_data <- ke_food_prices[
-      category %in% input$category &
-        commodity %in% input$commodity &
-        unit %in% input$unit &
-        priceflag %in% input$priceflag &
-        pricetype %in% input$pricetype
-    ]
-
-
-
-
-
-    # mysummary <- filteredd_data[, .(mean_price = mean(price)), by =  by_vec]
-    # mysummary
-    filteredd_data
-    #fwrite(mysummary, "filteredd_data.csv")
-
-  })
-
   output$category_ui <- renderUI({
     selectInput("category", "Category:", choices = unique(ke_food_prices$category))
   })
@@ -70,10 +44,43 @@ app_server <-  function(input, output, session) {
   })
 
   output$page_year_ui <- renderUI({
-    year_filtered <- ke_food_prices[ke_food_prices$category == input$category & ke_food_prices$commodity == input$commodity & ke_food_prices$unit == input$unit & ke_food_prices$priceflag == input$priceflag & ke_food_prices$pricetype == input$pricetype, ]
+    year_filtered <- ke_food_prices[category == input$category & commodity == input$commodity & unit == input$unit & priceflag == input$priceflag & pricetype == input$pricetype, ]
     choices <-  unique(year_filtered$year)
-    selectInput("page1_year", "Year:", choices =choices, multiple = TRUE, selected = choices)
+    selectInput("page1_year", "Year:", choices = choices, multiple = TRUE, selected = choices)
+
   })
+
+  output$page1_county_ui <- renderUI({
+    county_filtered <- ke_food_prices[category == input$category & commodity == input$commodity & unit == input$unit & priceflag == input$priceflag & pricetype == input$pricetype & year %in% input$page1_year, ]
+    choices <-  c("All", unique(county_filtered$county))
+    selectInput("page1_county", "County:", choices = choices, multiple = FALSE, selected = "All")
+  })
+
+
+  filtered_data <- reactive({
+    #req(input$category, input$commodity, input$unit, input$priceflag, input$pricetype)
+
+    by_vec <- c("year_month_date","year_month", input$category, input$commodity, input$unit, input$pricetype)
+
+
+
+    filteredd_data <- ke_food_prices[
+      category %in% input$category &
+        commodity %in% input$commodity &
+        unit %in% input$unit &
+        priceflag %in% input$priceflag &
+        pricetype %in% input$pricetype &
+        year %in% input$page1_year
+    ]
+
+    if(input$page1_county != "All"){
+      filteredd_data <- filteredd_data[county %in% input$page1_county]
+    }
+
+    filteredd_data
+
+  })
+
 
 
   #Plot the filtered data
@@ -90,6 +97,7 @@ app_server <-  function(input, output, session) {
 
 
     filtered_data <- filtered_data()
+    #fwrite(filtered_data, "filtered_data.csv")
     commodity <- input$commodity
     pricetype <- input$pricetype
 
@@ -125,8 +133,8 @@ app_server <-  function(input, output, session) {
   output$price_quarter_means <- renderPlotly({
     price_val =  currency()
 
-    df_q <- filtered_data()[year%in% input$page1_year, .(mean_price = mean(get(price_val))),
-                            by = .(quarter)]
+     df_q <- filtered_data()[,.(mean_price = mean(get(price_val))),
+                             by = .(quarter)]
 
     df_q[, quarter := factor(quarter, levels = 1:4,
                              labels = c("Q1", "Q2", "Q3", "Q4"))]
@@ -148,7 +156,7 @@ app_server <-  function(input, output, session) {
   output$price_month_means <- renderPlotly({
     price_val =  currency()
 
-    df_m <- filtered_data()[year%in% input$page1_year, .(mean_price = mean(get(price_val))),
+    df_m <- filtered_data()[, .(mean_price = mean(get(price_val))),
                             by = .(month)]
 
     month_plot <- ggplot(df_m, aes(x = month, y = mean_price, fill = month)) +

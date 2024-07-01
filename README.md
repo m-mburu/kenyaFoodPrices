@@ -9,9 +9,11 @@
 <!-- badges: end -->
 
 This is a package to visualize food prices in Kenya. The data is sourced
-from the World Food Programme (WFP) and is available on the Humanitarian
-Data Exchange (HDX) platform. The app is hosted on shinyapps.io and can
-be accessed [here](https://mmburu.shinyapps.io/kenyaFoodPrices/).
+from the World Food Programme (WFP) and is available on the
+[Humanitarian Data Exchange (HDX)
+platform](https://data.humdata.org/dataset/wfp-food-prices-for-kenya?).
+The app is hosted on shinyapps.io and can be accessed
+[here](https://mmburu.shinyapps.io/kenyaFoodPrices/).
 
 ## Installation
 
@@ -50,8 +52,8 @@ ke_food_prices_maize[, .(mean_price = mean(price)), by = .(date)] %>%
 ``` r
 # Example usage of the function
 display_time_in_timezone("Africa/Nairobi")
-#> Last Run On (Your System Timezone): 2024-07-01 06:24:33 UTC
-#> Last Run On (Specified Timezone): 2024-07-01 09:24:33 Africa/Nairobi
+#> Last Run On (Your System Timezone): 2024-07-01 14:33:58 Africa/Nairobi
+#> Last Run On (Specified Timezone): 2024-07-01 14:33:58 Africa/Nairobi
 ```
 
 - **Thanks to WFP for providing the data on Humanitarian Data Exchange

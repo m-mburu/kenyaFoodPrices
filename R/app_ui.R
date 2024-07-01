@@ -33,13 +33,16 @@ app_ui <- function(request) {
           ),
 
           fluidRow(
+            column(4, uiOutput("page_year_ui")),
+            column(4, uiOutput("page1_county_ui"))
+          ),
+
+
+          fluidRow(
             column(6, plotlyOutput("linePlot")),
             column(6, plotlyOutput("main_price_histogram"))
           ),
           ## UI output for year
-          fluidRow(
-            column(4, uiOutput("page_year_ui"))
-          ),
 
           fluidRow(
             column(6, plotlyOutput("price_quarter_means")),
@@ -49,10 +52,10 @@ app_ui <- function(request) {
       ),
 
       tabPanel(
-        "Latest Prices",
+        "Maps",
         fluidPage(
           h4("Additional Analysis"),
-          p("This section can include additional graphs, tables, or other analyses.")
+          p("This section will include additional graphs, tables, or other analyses.")
           # Add additional UI elements for the second tab here
         )
       )
