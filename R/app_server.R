@@ -20,17 +20,17 @@ app_server <-  function(input, output, session) {
   })
 
   output$commodity_ui <- renderUI({
-    #req(input$category)
+    req(input$category)
     commodity_filtered <- ke_food_prices[ke_food_prices$category == input$category, ]
+
     selectInput("commodity", "Commodity:", choices = unique(commodity_filtered$commodity))
   })
 
   output$unit_ui <- renderUI({
 
-    #req(input$category, input$commodity)
+    req(input$category, input$commodity)
 
-    unit_filtered <- ke_food_prices[category == input$category &
-                                      commodity == input$commodity, ]
+    unit_filtered <- ke_food_prices[commodity == input$commodity, ]
 
     selectInput("unit", "Unit:", choices = unique(unit_filtered$unit))
 
@@ -38,7 +38,7 @@ app_server <-  function(input, output, session) {
 
   output$priceflag_ui <- renderUI({
 
-    #req(input$category, input$commodity, input$unit)
+    req(input$category, input$commodity, input$unit)
     priceflag_filtered <- ke_food_prices[category == input$category &
                                            commodity == input$commodity &
                                            unit == input$unit, ]
@@ -48,7 +48,7 @@ app_server <-  function(input, output, session) {
   })
 
   output$pricetype_ui <- renderUI({
-   # req(input$category, input$commodity, input$unit, input$priceflag)
+   req(input$category, input$commodity, input$unit, input$priceflag)
 
     pricetype_filtered <- ke_food_prices[category == input$category &
                                            commodity == input$commodity &
@@ -60,15 +60,16 @@ app_server <-  function(input, output, session) {
   })
 
   output$page_year_ui <- renderUI({
+    req(input$category, input$commodity, input$unit, input$priceflag)
 
-    year_filtered <- ke_food_prices[category == input$category &
-                                      commodity == input$commodity &
-                                      unit == input$unit &
-                                      priceflag == input$priceflag &
-                                      pricetype == input$pricetype, ]
+    year_filtered <- ke_food_prices[#category == input$category &
+                                      commodity == input$commodity ]
+                                      # unit == input$unit &
+                                      # priceflag == input$priceflag &
+                                      # pricetype == input$pricetype, ]
 
-    min_date <- min(year_filtered$date, na.rm = TRUE)
-    max_date <- max(year_filtered$date, na.rm = TRUE)
+    min_date <- year_filtered[, min(date, na.rm = TRUE)]
+    max_date <- year_filtered[, max(date, na.rm = TRUE)]
 
     dateRangeInput("page1_date", "Date Range:",
                    start = min_date, end = max_date,
@@ -77,12 +78,13 @@ app_server <-  function(input, output, session) {
   })
 
   output$page1_county_ui <- renderUI({
-    county_filtered <- ke_food_prices[category == input$category &
-                                        commodity == input$commodity &
-                                        unit == input$unit &
-                                        priceflag == input$priceflag &
-                                        pricetype == input$pricetype &
-                                        data.table::between(date, input$page1_date[1], input$page1_date[2]) ]
+    req(input$category, input$commodity, input$unit, input$priceflag)
+    county_filtered <- ke_food_prices[#category == input$category &
+                                        commodity == input$commodity]
+                                        # unit == input$unit &
+                                        # priceflag == input$priceflag &
+                                        # pricetype == input$pricetype &
+                                        # data.table::between(date, input$page1_date[1], input$page1_date[2]) ]
 
 
     choices <-  c("All", unique(county_filtered$county))
