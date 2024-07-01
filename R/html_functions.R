@@ -45,3 +45,31 @@ line_plot_prices <- function(mean_prices, commodity, pricetype, palette = "Set1"
   ggplotly(p)
 }
 
+#' Display the current time in a specific timezone
+#'
+#' This function takes a timezone as input and displays the current time in that timezone
+#' along with the system's local time and timezone.
+#'
+#' @importFrom lubridate with_tz
+#' @param timezone A character string specifying the timezone.
+#' @return A character string with the formatted current times.
+#' @examples
+#' display_time_in_timezone("America/New_York")
+#' @export
+
+display_time_in_timezone <- function(timezone) {
+
+  # Convert system time to specified timezone using lubridate::with_tz
+  time_in_tz <- lubridate::with_tz(Sys.time(), tzone = timezone)
+  time_in_tz <- format(time_in_tz, "%Y-%m-%d %H:%M:%S")
+  time_in_tz <- paste(time_in_tz, timezone)
+
+  # Format system time and include the system's original timezone using lubridate::Sys.timezone
+  formatted_time <- sprintf("%s %s", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), Sys.timezone())
+
+  # Combine and format the output using sprintf for better formatting
+  output_message <- sprintf("Last Run On (Your System Timezone): %s\nLast Run On (Specified Timezone): %s", formatted_time, time_in_tz)
+
+  # Print the result
+  cat(output_message)
+}

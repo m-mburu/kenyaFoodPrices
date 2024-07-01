@@ -157,7 +157,9 @@ app_server <-  function(input, output, session) {
            x = "Month",
            y = "Mean Price") +
       scale_fill_viridis_d()+
-      theme_minimal()
+      theme_minimal()+
+      theme(legend.position = "none")
+
 
   })
 

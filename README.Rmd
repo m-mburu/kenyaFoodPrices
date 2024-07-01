@@ -19,7 +19,7 @@ knitr::opts_chunk$set(
 [![R-CMD-check](https://github.com/m-mburu/kenyaFoodPrices/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/m-mburu/kenyaFoodPrices/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
-The goal of kenyaFoodPrices is to ...
+This is a package to visualize food prices in Kenya. The data is sourced from the World Food Programme (WFP) and is available on the Humanitarian Data Exchange (HDX) platform. The app is hosted on shinyapps.io and can be accessed [here](https://mmburu.shinyapps.io/kenyaFoodPrices/).
 
 ## Installation
 
@@ -57,24 +57,6 @@ ke_food_prices_maize[, .(mean_price = mean(price)), by = .(date)] %>%
 
 
 ```{r}
-library(lubridate)
-
-# Function to display the current time in a specific timezone
-display_time_in_timezone <- function(timezone) {
-  # Convert system time to specified timezone
-  time_in_tz <- with_tz(Sys.time(), tzone = timezone)
-  time_in_tz <- format(time_in_tz, "%Y-%m-%d %H:%M:%S")
-  time_in_tz <- paste(time_in_tz, timezone)
-  # Format system time and include the system's original timezone
-  formatted_time <- sprintf("%s %s", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), Sys.timezone())
-  
-  # Combine and format the output using sprintf for better formatting
-  output_message <- sprintf("Last Run On (Your System Timezone): %s\nLast Run On (Specified Timezone): %s", formatted_time, time_in_tz)
-  
-  # Print the result
-  cat(output_message)
-}
-
 # Example usage of the function
 display_time_in_timezone("Africa/Nairobi")
 

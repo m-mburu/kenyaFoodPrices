@@ -5,7 +5,7 @@
 \alias{ke_food_prices}
 \title{ke_food_prices}
 \format{
-A data frame with 10647 rows and 15 variables:
+A data frame with 16587 rows and 22 variables:
 \describe{
   \item{ date }{  Date }
   \item{ admin1 }{  character }
@@ -21,6 +21,13 @@ A data frame with 10647 rows and 15 variables:
   \item{ currency }{  character }
   \item{ price }{  numeric }
   \item{ usdprice }{  numeric }
+  \item{ year_month }{  character }
+  \item{ year_month_date }{  Date }
+  \item{ year }{  character }
+  \item{ month }{  factor }
+  \item{ quarter }{  integer }
+  \item{ year_quarter }{  character }
+  \item{ year_quarter_date }{  Date }
   \item{ unique_id }{  integer }
 }
 }

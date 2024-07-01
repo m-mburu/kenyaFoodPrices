@@ -8,7 +8,10 @@
 [![R-CMD-check](https://github.com/m-mburu/kenyaFoodPrices/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/m-mburu/kenyaFoodPrices/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
-The goal of kenyaFoodPrices is to …
+This is a package to visualize food prices in Kenya. The data is sourced
+from the World Food Programme (WFP) and is available on the Humanitarian
+Data Exchange (HDX) platform. The app is hosted on shinyapps.io and can
+be accessed [here](https://mmburu.shinyapps.io/kenyaFoodPrices/).
 
 ## Installation
 
@@ -45,40 +48,10 @@ ke_food_prices_maize[, .(mean_price = mean(price)), by = .(date)] %>%
 <img src="man/figures/README-unnamed-chunk-2-1.png" width="100%" />
 
 ``` r
-library(lubridate)
-#> 
-#> Attaching package: 'lubridate'
-#> The following objects are masked from 'package:data.table':
-#> 
-#>     hour, isoweek, mday, minute, month, quarter, second, wday, week,
-#>     yday, year
-#> The following objects are masked from 'package:base':
-#> 
-#>     date, intersect, setdiff, union
-```
-
-``` r
-
-# Function to display the current time in a specific timezone
-display_time_in_timezone <- function(timezone) {
-  # Convert system time to specified timezone
-  time_in_tz <- with_tz(Sys.time(), tzone = timezone)
-  time_in_tz <- format(time_in_tz, "%Y-%m-%d %H:%M:%S")
-  time_in_tz <- paste(time_in_tz, timezone)
-  # Format system time and include the system's original timezone
-  formatted_time <- sprintf("%s %s", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), Sys.timezone())
-  
-  # Combine and format the output using sprintf for better formatting
-  output_message <- sprintf("Last Run On (Your System Timezone): %s\nLast Run On (Specified Timezone): %s", formatted_time, time_in_tz)
-  
-  # Print the result
-  cat(output_message)
-}
-
 # Example usage of the function
 display_time_in_timezone("Africa/Nairobi")
-#> Last Run On (Your System Timezone): 2024-07-01 00:56:57 UTC
-#> Last Run On (Specified Timezone): 2024-07-01 03:56:57 Africa/Nairobi
+#> Last Run On (Your System Timezone): 2024-07-01 08:33:16 Africa/Nairobi
+#> Last Run On (Specified Timezone): 2024-07-01 08:33:16 Africa/Nairobi
 ```
 
 - **Thanks to WFP for providing the data on Humanitarian Data Exchange

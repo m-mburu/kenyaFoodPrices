@@ -32,11 +32,30 @@ create_unique_ids <- function(data) {
   #return(data)
 }
 
+ke_food_prices[, year_month := format(date, "%Y-%m")]
+ke_food_prices[, year_month_date := as.Date(paste(year_month, "-01", sep = ""))]
+ke_food_prices[, year := format(date, "%Y")]
+ke_food_prices[, month := format(date, "%b")]
+
+months_levels <- c("Jan", "Feb", "Mar",
+                   "Apr", "May", "Jun",
+                   "Jul", "Aug", "Sep",
+                   "Oct", "Nov", "Dec")
+
+ke_food_prices[, month := factor(month, levels = months_levels)]
+ke_food_prices[, quarter := quarter(date)]
+ke_food_prices[, year_quarter := paste(year, quarter, sep = "-")]
+
+ke_food_prices[, year_quarter_date := median(date), by = .(year_quarter)]
+
+
 ke_food_prices <- create_unique_ids(ke_food_prices)
 
 usethis::use_data(ke_food_prices, overwrite = TRUE)
 
 checkhelper::use_data_doc("ke_food_prices")
+
+
 
 load("data-raw/kenya_counties.rda")
 
