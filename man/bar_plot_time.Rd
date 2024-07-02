@@ -13,7 +13,8 @@ bar_plot_time(
   interactive = TRUE,
   mytitle = "Mean Price per Month for",
   x_lab = "Month",
-  y_lab = "Mean Price"
+  y_lab = "Mean Price",
+  convert_axis = TRUE
 )
 }
 \arguments{
@@ -34,6 +35,8 @@ bar_plot_time(
 \item{x_lab}{Label for the x-axis.}
 
 \item{y_lab}{Label for the y-axis.}
+
+\item{convert_axis}{Logical, whether to convert the x-axis labels to a more readable format.}
 }
 \value{
 A ggplot or plotly object, depending on the 'interactive' flag.

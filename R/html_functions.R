@@ -30,7 +30,7 @@ line_plot_prices <- function(mean_prices, commodity, pricetype) {
 
   # Create the line plot
   p <- ggplot(mean_prices, aes(x = year_quarter_date, y = mean_price)) +
-    geom_line(color = "#2D708EFF" ) +
+    geom_line(color = "#51C56AFF" ) +
     labs(
       title = paste("Price of", commodity, "in Kenya (", pricetype, ")", sep = " "),
       x = "Date",
@@ -118,6 +118,7 @@ mycolors <- function(n = 12){
 #' @param mytitle Title for the plot.
 #' @param x_lab Label for the x-axis.
 #' @param y_lab Label for the y-axis.
+#' @param convert_axis Logical, whether to convert the x-axis labels to a more readable format.
 #' @return A ggplot or plotly object, depending on the 'interactive' flag.
 #' @export
 bar_plot_time <- function(df,
@@ -128,7 +129,22 @@ bar_plot_time <- function(df,
                           interactive = TRUE,
                           mytitle =  "Mean Price per Month for",
                           x_lab = "Month",
-                          y_lab = "Mean Price") {
+                          y_lab = "Mean Price",
+                          convert_axis = TRUE) {
+
+  if (convert_axis) {
+
+    labels_values <- df %>%
+      dplyr::select({{time_var}}) %>%
+      dplyr::distinct() %>%
+      dplyr::pull()
+    labels_values_x_axis <- calculate_label_formatting(df, labels_values)
+    myangle <- labels_values_x_axis$angle
+
+  }else{
+    myangle <- 0
+  }
+
   mytitle <- paste(mytitle, commodity,  pricetype)
   # Create the ggplot object
   p <- ggplot(df, aes(x = {{time_var}}, y = {{price_var}}, fill = {{time_var}})) +
@@ -138,9 +154,15 @@ bar_plot_time <- function(df,
       x =x_lab,
       y =y_lab
     ) +
-    scale_fill_manual(values =mycolors(n=12) ) +
+    scale_fill_manual(values =c("#2BB07FFF", "#C2DF23FF", "#38598CFF", "#482173FF", "#85D54AFF",
+                                "#1E9B8AFF", "#51C56AFF", "#FDE725FF", "#2D708EFF", "#433E85FF",
+                                "#25858EFF", "#440154FF",
+                                "#7FC97F", "#BEAED4", "#FDC086", "#FFFF99", "#386CB0", "#F0027F",
+                                "#BF5B17",
+                                "#1B9E77", "#D95F02", "#7570B3", "#E7298A", "#66A61E", "#E6AB02",
+                                "#A6761D")) +
     theme_minimal() +
-    theme(legend.position = "none")
+    theme(legend.position = "none", axis.text.x = element_text(angle = myangle, hjust = 1))
 
   # Convert to plotly if interactive is TRUE
   if (interactive) {
@@ -149,6 +171,43 @@ bar_plot_time <- function(df,
 
   return(p)
 }
+
+
+
+#' Calculate Label Formatting Based on Label Properties
+#'
+#' This function determines the optimal text formatting for plot labels based on the number
+#' of labels and the maximum character length of the labels. It is designed to optimize
+#' the readability of labels on plots, particularly bar plots where axis labels can
+#' become crowded or overlap.
+#'
+#' @param labels Vector of labels to be placed on the x-axis of a plot.
+#' @param df Data frame containing the data to plot.
+#' @return A list containing the angle at which to display the labels, the width factor
+#' for bar elements in bar plots, and the maximum character limit before wrapping text.
+#'
+#' @export
+calculate_label_formatting <- function(df, labels) {
+  n_row <- length(df)
+  n_chars <- max(nchar(labels))
+
+  if (n_row > 5 & n_chars < 100) {
+    angle <- 0
+    mywidth <- 0.9
+    width_wrap <- 10
+  } else if (n_row > 5 & n_chars >= 100) {
+    angle <- 45
+    mywidth <- 0.9
+    width_wrap <- 10
+  } else {
+    angle <- 0
+    mywidth <- 0.5
+    width_wrap <- 20
+  }
+
+  list(angle = angle, mywidth = mywidth, width_wrap = width_wrap)
+}
+
 
 # library(ggplot2)
 # library(data.table)

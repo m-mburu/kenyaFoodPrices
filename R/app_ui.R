@@ -16,7 +16,7 @@ app_ui <- function(request) {
   tagList(
     golem_add_external_resources(),  # Function for adding external resources
     navbarPage(
-      "Kenya Food Prices Dashboard",
+      title= "Kenya Food Prices Dashboard",
 
       tabPanel(
         "Trends Over Time",
@@ -35,7 +35,8 @@ app_ui <- function(request) {
 
           fluidRow(
             column(2, uiOutput("page_year_ui")),
-            column(2, uiOutput("page1_county_ui"))
+            column(2, uiOutput("page1_county_ui")),
+            column(2, uiOutput("page1_market_ui"))
           ),
 
 
@@ -48,15 +49,20 @@ app_ui <- function(request) {
           fluidRow(
             column(6, plotlyOutput("price_quarter_means")),
             column(6, plotlyOutput("price_month_means"))
+          ),
+          ## county bar plot & market bar plot
+          fluidRow(
+            column(6, plotlyOutput("county_bar_plot")),
+            column(6, plotlyOutput("market_bar_plot"))
           )
         )
       ),
-
+      #
       tabPanel(
-        "Maps",
+        "Maps & Additional Analysis",
         fluidPage(
           h4("Additional Analysis"),
-          p("This section will include additional graphs, tables, or other analyses.")
+          p("In future versions, we will add more analysis here. depending on the richness of the data.")
           # Add additional UI elements for the second tab here
         )
       )
