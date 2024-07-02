@@ -68,6 +68,7 @@ app_server <-  function(input, output, session) {
                                       unit == input$unit &
                                       priceflag == input$priceflag &
                                       pricetype == input$pricetype, ]
+    req(nrow(year_filtered ) > 2)
 
     min_date <- year_filtered[, min(date, na.rm = TRUE)]
     max_date <- year_filtered[, max(date, na.rm = TRUE)]
