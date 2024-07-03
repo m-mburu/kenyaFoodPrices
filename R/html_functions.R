@@ -37,7 +37,7 @@ line_plot_prices <- function(mean_prices, commodity, pricetype) {
       y = "Mean Price"
     ) +
     #scale_color_brewer(palette = palette, type = "qual") +
-    scale_x_date(date_labels = "%m/%y", breaks = "24 month") +
+    scale_x_date(date_labels = "%m/%y") +
     theme_minimal() +
     theme(legend.position = "bottom")
 
@@ -154,13 +154,13 @@ bar_plot_time <- function(df,
       x =x_lab,
       y =y_lab
     ) +
-    scale_fill_manual(values =c("#2BB07FFF", "#C2DF23FF", "#38598CFF", "#482173FF", "#85D54AFF",
+    scale_fill_manual(values =c( "#386CB0", "#F0027F",
+                                "#BF5B17","#1B9E77", "#D95F02", "#7570B3", "#66A61E", "#E6AB02",
+                                "#A6761D", "#2BB07FFF", "#C2DF23FF", "#38598CFF", "#482173FF", "#85D54AFF",
                                 "#1E9B8AFF", "#51C56AFF", "#FDE725FF", "#2D708EFF", "#433E85FF",
                                 "#25858EFF", "#440154FF",
-                                "#7FC97F", "#BEAED4", "#FDC086", "#FFFF99", "#386CB0", "#F0027F",
-                                "#BF5B17",
-                                "#1B9E77", "#D95F02", "#7570B3", "#E7298A", "#66A61E", "#E6AB02",
-                                "#A6761D")) +
+                                "#7FC97F",  "#E7298A",
+                                "#BEAED4", "#FDC086", "#FFFF99")) +
     theme_minimal() +
     theme(legend.position = "none", axis.text.x = element_text(angle = myangle, hjust = 1))
 

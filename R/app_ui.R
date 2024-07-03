@@ -27,14 +27,14 @@ app_ui <- function(request) {
             column(2, selectInput("category", "Category:", choices = unique(ke_food_prices$category))),
             column(2, uiOutput("commodity_ui")),
             column(2, uiOutput("unit_ui")),
-            column(2, uiOutput("priceflag_ui")),
+            #column(2, uiOutput("priceflag_ui")),
             column(2, uiOutput("pricetype_ui")),
-            column(2,selectInput("Currency", "Currency", c("KES" = "price", "USD" ="usdprice" )))
+            column(2,selectInput("Currency", "Currency", c("KES" = "price", "USD" ="usdprice" ))),
+            column(2, uiOutput("page_year_ui"))
           ),
           br(),
 
           fluidRow(
-            column(2, uiOutput("page_year_ui")),
             column(2, uiOutput("page1_county_ui")),
             column(2, uiOutput("page1_market_ui"))
           ),

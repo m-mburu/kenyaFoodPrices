@@ -36,24 +36,24 @@ app_server <-  function(input, output, session) {
 
   })
 
-  output$priceflag_ui <- renderUI({
-
-    req(input$category, input$commodity, input$unit)
-    priceflag_filtered <- ke_food_prices[category == input$category &
-                                           commodity == input$commodity &
-                                           unit == input$unit, ]
-
-    selectInput("priceflag", "Price Flag:",
-                choices = unique(priceflag_filtered$priceflag))
-  })
+  # output$priceflag_ui <- renderUI({
+  #
+  #   req(input$category, input$commodity, input$unit)
+  #   priceflag_filtered <- ke_food_prices[category == input$category &
+  #                                          commodity == input$commodity &
+  #                                          unit == input$unit, ]
+  #
+  #   selectInput("priceflag", "Price Flag:",
+  #               choices = unique(priceflag_filtered$priceflag))
+  # })
 
   output$pricetype_ui <- renderUI({
-   req(input$category, input$commodity, input$unit, input$priceflag)
+   req(input$category, input$commodity, input$unit)#, input$priceflag
 
     pricetype_filtered <- ke_food_prices[category == input$category &
                                            commodity == input$commodity &
-                                           unit == input$unit &
-                                           priceflag == input$priceflag, ]
+                                           unit == input$unit ]
+                                           #priceflag == input$priceflag, ]
 
     selectInput("pricetype", "Price Type:",
                 choices = unique(pricetype_filtered$pricetype))
@@ -61,12 +61,12 @@ app_server <-  function(input, output, session) {
 
   output$page_year_ui <- renderUI({
 
-    req(input$category, input$commodity, input$unit, input$priceflag, input$pricetype)
+    req(input$category, input$commodity, input$unit,  input$pricetype)#input$priceflag,
 
     year_filtered <- ke_food_prices[category == input$category &
                                       commodity == input$commodity &
                                       unit == input$unit &
-                                      priceflag == input$priceflag &
+                                      #priceflag == input$priceflag &
                                       pricetype == input$pricetype, ]
     req(nrow(year_filtered ) > 2)
 
@@ -81,12 +81,12 @@ app_server <-  function(input, output, session) {
 
   output$page1_county_ui <- renderUI({
 
-    req(input$category, input$commodity, input$unit, input$priceflag, input$pricetype, input$page1_date)
+    req(input$category, input$commodity, input$unit, input$pricetype)# input$priceflag, , input$page1_date
 
     county_filtered <- ke_food_prices[category == input$category &
                                         commodity == input$commodity&
                                         unit == input$unit &
-                                        priceflag == input$priceflag &
+                                       # priceflag == input$priceflag &
                                         pricetype == input$pricetype &
                                         data.table::between(date, input$page1_date[1], input$page1_date[2]) ]
 
@@ -99,12 +99,12 @@ app_server <-  function(input, output, session) {
 
   output$page1_market_ui <- renderUI({
 
-    req(input$category, input$commodity, input$unit, input$priceflag, input$pricetype, input$page1_date, input$page1_county)
+    req(input$category, input$commodity, input$unit, input$pricetype, input$page1_county)# input$priceflag, , input$page1_date,
 
     market_filtered <- ke_food_prices[category == input$category &
                                         commodity == input$commodity&
                                         unit == input$unit &
-                                        priceflag == input$priceflag &
+                                        #priceflag == input$priceflag &
                                         pricetype == input$pricetype &
                                         data.table::between(date, input$page1_date[1], input$page1_date[2]) ]
 
@@ -122,7 +122,7 @@ app_server <-  function(input, output, session) {
 
   filtered_data <- reactive({
 
-    req(input$category, input$commodity, input$unit, input$priceflag, input$pricetype, input$page1_date, input$page1_county)
+    req(input$category, input$commodity, input$unit,  input$pricetype, input$page1_date, input$page1_county)#input$priceflag,, input$page1_market_ui
 
     by_vec <- c("year_month_date","year_month",
                 input$category, input$commodity,
@@ -134,7 +134,7 @@ app_server <-  function(input, output, session) {
       category %in% input$category &
         commodity %in% input$commodity &
         unit %in% input$unit &
-        priceflag %in% input$priceflag &
+        #priceflag %in% input$priceflag &
         pricetype %in% input$pricetype &
         data.table::between(date, input$page1_date[1], input$page1_date[2])
     ]
@@ -143,6 +143,8 @@ app_server <-  function(input, output, session) {
 
       filteredd_data <- filteredd_data[county %in% input$page1_county]
     }
+
+    req(length(input$page1_market) != 0)
 
     if(input$page1_market != "All"){
 
@@ -170,6 +172,7 @@ app_server <-  function(input, output, session) {
 
 
     filtered_data <- filtered_data()
+    req(nrow(filtered_data) > 2)
     #fwrite(filtered_data, "filtered_data.csv")
     commodity <- input$commodity
     pricetype <- input$pricetype
