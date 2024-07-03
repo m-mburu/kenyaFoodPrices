@@ -62,7 +62,7 @@ app_ui <- function(request) {
         "Maps & Additional Analysis",
         fluidPage(
           h4("Additional Analysis"),
-          p("In future versions, we will add more analysis here. depending on the richness of the data.")
+          p("In future versions, I will add more analysis here. depending on the richness of the data.")
           # Add additional UI elements for the second tab here
         )
       )
