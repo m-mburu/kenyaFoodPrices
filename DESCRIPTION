@@ -20,7 +20,9 @@ Imports:
     lubridate,
     plotly,
     scales,
-    shiny (>= 1.8.1.1)
+    shiny (>= 1.8.1.1),
+    shinycssloaders,
+    waiter
 Suggests: 
     knitr,
     rmarkdown,

@@ -6,6 +6,8 @@
 #' @import data.table
 #' @import leaflet
 #' @import plotly
+#' @import waiter
+#' @import shinycssloaders
 #' @noRd
 #'
 
@@ -20,6 +22,7 @@ app_ui <- function(request) {
 
       tabPanel(
         "Trends Over Time",
+        useWaiter(),
         fluidPage(
           generate_welcome_message(),
 
@@ -41,8 +44,10 @@ app_ui <- function(request) {
 
 
           fluidRow(
-            column(6, plotlyOutput("linePlot")),
-            column(6, plotlyOutput("main_price_histogram"))
+            column(6, plotlyOutput("linePlot")%>%
+                     withSpinner(color="#482173FF")),
+            column(6, plotlyOutput("main_price_histogram")%>%
+                     withSpinner(color="#482173FF"))
           ),
           ## UI output for year
 

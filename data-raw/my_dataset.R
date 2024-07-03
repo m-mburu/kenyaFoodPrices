@@ -48,6 +48,10 @@ ke_food_prices[, year_quarter := paste(year, quarter, sep = "-")]
 
 ke_food_prices[, year_quarter_date := median(date), by = .(year_quarter)]
 
+all_maize <- c("Maize", "Maize (white)", "Maize (white, dry)")
+
+ke_food_prices[commodity %in% all_maize, commodity := "Maize"]
+
 
 ke_food_prices <- create_unique_ids(ke_food_prices)
 
