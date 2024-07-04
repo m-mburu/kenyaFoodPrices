@@ -42,7 +42,7 @@ line_plot_prices <- function(mean_prices, commodity, pricetype) {
     theme(legend.position = "bottom")
 
   # Convert the ggplot object to a ggplotly object
-  ggplotly(p)
+  ggplotly(p, dynamicTicks = TRUE)
 }
 
 #' Display the current time in a specific timezone
@@ -166,7 +166,7 @@ bar_plot_time <- function(df,
 
   # Convert to plotly if interactive is TRUE
   if (interactive) {
-    p <- ggplotly(p)
+    p <- ggplotly(p, dynamicTicks = TRUE)
   }
 
   return(p)

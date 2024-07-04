@@ -5,7 +5,7 @@
 \alias{ke_food_prices}
 \title{ke_food_prices}
 \format{
-A data frame with 16587 rows and 23 variables:
+A data frame with 10647 rows and 23 variables:
 \describe{
   \item{ unique_id }{  integer }
   \item{ date }{  Date }

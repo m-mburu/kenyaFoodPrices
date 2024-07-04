@@ -34,11 +34,11 @@ library(ggthemes)
 data(ke_food_prices)
 
 
-ke_food_prices_maize <- ke_food_prices[commodity == "Maize (white)" & pricetype == "Retail",]
+ke_food_prices_maize <- ke_food_prices[commodity == "Maize" & pricetype == "Retail" & unit =="KG",]
 
-ke_food_prices_maize[, .(mean_price = mean(price)), by = .(date)] %>%
-  ggplot(aes(x = date, y = mean_price)) +
-  geom_line(, color = "steelblue") +
+ke_food_prices_maize[, .(mean_price = mean(price)), by = .(year_quarter_date)] %>%
+  ggplot(aes(x = year_quarter_date, y = mean_price)) +
+  geom_line(, color = "#66A61E") +
   labs(title = "1KG of Maize Price in Kenya",
        x = "Date",
        y = "Mean Price") +
@@ -52,8 +52,8 @@ ke_food_prices_maize[, .(mean_price = mean(price)), by = .(date)] %>%
 ``` r
 # Example usage of the function
 display_time_in_timezone("Africa/Nairobi")
-#> Last Run On (Your System Timezone): 2024-07-04 00:57:07 UTC
-#> Last Run On (Specified Timezone): 2024-07-04 03:57:07 Africa/Nairobi
+#> Last Run On (Your System Timezone): 2024-07-04 06:20:46 Africa/Nairobi
+#> Last Run On (Specified Timezone): 2024-07-04 06:20:46 Africa/Nairobi
 ```
 
 - **Thanks to WFP for providing the data on Humanitarian Data Exchange

@@ -40,11 +40,11 @@ library(ggthemes)
 data(ke_food_prices)
 
 
-ke_food_prices_maize <- ke_food_prices[commodity == "Maize (white)" & pricetype == "Retail",]
+ke_food_prices_maize <- ke_food_prices[commodity == "Maize" & pricetype == "Retail" & unit =="KG",]
 
-ke_food_prices_maize[, .(mean_price = mean(price)), by = .(date)] %>%
-  ggplot(aes(x = date, y = mean_price)) +
-  geom_line(, color = "steelblue") +
+ke_food_prices_maize[, .(mean_price = mean(price)), by = .(year_quarter_date)] %>%
+  ggplot(aes(x = year_quarter_date, y = mean_price)) +
+  geom_line(, color = "#66A61E") +
   labs(title = "1KG of Maize Price in Kenya",
        x = "Date",
        y = "Mean Price") +
