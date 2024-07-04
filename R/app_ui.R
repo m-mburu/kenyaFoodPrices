@@ -6,7 +6,6 @@
 #' @import data.table
 #' @import leaflet
 #' @import plotly
-#' @import waiter
 #' @import shinycssloaders
 #' @noRd
 #'
@@ -22,7 +21,6 @@ app_ui <- function(request) {
 
       tabPanel(
         "Trends Over Time",
-        useWaiter(),
         fluidPage(
           generate_welcome_message(),
 
@@ -52,13 +50,17 @@ app_ui <- function(request) {
           ## UI output for year
 
           fluidRow(
-            column(6, plotlyOutput("price_quarter_means")),
-            column(6, plotlyOutput("price_month_means"))
+            column(6, plotlyOutput("price_quarter_means")%>%
+                     withSpinner(color="#482173FF")),
+            column(6, plotlyOutput("price_month_means")%>%
+                     withSpinner(color="#482173FF"))
           ),
           ## county bar plot & market bar plot
           fluidRow(
-            column(6, plotlyOutput("county_bar_plot")),
-            column(6, plotlyOutput("market_bar_plot"))
+            column(6, plotlyOutput("county_bar_plot")%>%
+                     withSpinner(color="#482173FF")),
+            column(6, plotlyOutput("market_bar_plot")%>%
+                     withSpinner(color="#482173FF"))
           )
         )
       ),

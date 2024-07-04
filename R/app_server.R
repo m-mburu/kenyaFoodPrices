@@ -292,19 +292,5 @@ app_server <-  function(input, output, session) {
 
   })
 
-  waiter_show( # show the waiter
-    html = spin_fading_circles())
-
-  # observeEvent(input$show, {
-  #
-  #     waiter_show( # show the waiter
-  #         html = spin_fading_circles() # use a spinner
-  #     )
-
-  Sys.sleep(4) # do something that takes time
-
-  waiter_hide() # hide the waiter
-
-
 
   }
