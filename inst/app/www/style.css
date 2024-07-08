@@ -127,12 +127,4 @@ div.quarto-post h3 a {
   aspect-ratio: 9/ 5 !important;
 }
 
-/* Base styles for .js-plotly-plot */
-.js-plotly-plot {
-    width: 100% !important;
-    height: auto !important;
-    max-width: 100% !important;
-    margin: 0 auto;
-    padding: 10px;
-    box-sizing: border-box;
-}
+
