@@ -136,14 +136,3 @@ div.quarto-post h3 a {
     padding: 10px;
     box-sizing: border-box;
 }
-
-/* Media query for mobile screens */
-@media (max-width: 600px) {
-    .js-plotly-plot {
-        width: 100 !important%;
-        height: auto !important;
-        padding: 5px;
-        margin: 0;
-    }
-}
-
