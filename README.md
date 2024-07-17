@@ -52,8 +52,8 @@ ke_food_prices_maize[, .(mean_price = mean(price)), by = .(year_quarter_date)] %
 ``` r
 # Example usage of the function
 display_time_in_timezone("Africa/Nairobi")
-#> Last Run On (Your System Timezone): 2024-07-16 00:59:06 UTC
-#> Last Run On (Specified Timezone): 2024-07-16 03:59:06 Africa/Nairobi
+#> Last Run On (Your System Timezone): 2024-07-17 01:00:03 UTC
+#> Last Run On (Specified Timezone): 2024-07-17 04:00:03 Africa/Nairobi
 ```
 
 - **Thanks to WFP for providing the data on Humanitarian Data Exchange
