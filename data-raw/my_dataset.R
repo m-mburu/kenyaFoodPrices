@@ -52,7 +52,13 @@ all_maize <- c("Maize", "Maize (white)", "Maize (white, dry)")
 
 ke_food_prices[commodity %in% all_maize, commodity := "Maize"]
 
+## grepl beans
+#ke_food_prices[grepl("Beans", commodity), unique(commodity)]
 
+# "Beans (dry)"  to "Beans"
+ke_food_prices[commodity == "Beans (dry)", commodity := "Beans"]
+
+ke_food_prices[grepl("Beans", commodity), table(commodity)]
 ke_food_prices <- create_unique_ids(ke_food_prices)
 
 
