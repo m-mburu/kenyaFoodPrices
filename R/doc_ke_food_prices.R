@@ -2,7 +2,7 @@
 #'
 #' Description.
 #'
-#' @format A data frame with 11999 rows and 23 variables:
+#' @format A data frame with 14659 rows and 23 variables:
 #' \describe{
 #'   \item{ unique_id }{  integer }
 #'   \item{ date }{  Date }
