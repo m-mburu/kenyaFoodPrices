@@ -90,6 +90,7 @@ assign_counties <- function(data_points, counties_sf) {
 
 kenya_counties[, county := stringr::str_to_title(county)]
 
+ke_food_prices <- ke_food_prices[!is.na(longitude) & !is.na(latitude)]
 kenya_counties_ids <- assign_counties(ke_food_prices, kenya_counties)
 
 setDT(kenya_counties_ids)

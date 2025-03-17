@@ -23,4 +23,4 @@ packages <- c("config", "data.table", "dplyr", "DT", "golem", "leaflet",
 check_and_install_packages(packages)
 
 # Additional GitHub packages can be installed here
-remotes::install_github('dickoa/rhdx')
+remotes::install_github('dickoa/rhdx', upgrade = "never")
