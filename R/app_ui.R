@@ -93,12 +93,25 @@ golem_add_external_resources <- function() {
   )
 
   tags$head(
+    # Favicon and bundled resources
     favicon(),
     bundle_resources(
       path = app_sys("app/www"),
       app_title = "kenyaFoodPrices"
-    )
-    # Add here other external resources
-    # for example, you can add shinyalert::useShinyalert()
+    ),
+
+    # ✅ Google Analytics script
+    HTML("
+      <!-- Google tag (gtag.js) -->
+      <script async src='https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX'></script>
+      <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+
+        gtag('config',  'G-BFNZ97VTLJ');
+      </script>
+    ")
   )
 }
+
