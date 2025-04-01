@@ -2,17 +2,19 @@
 #'
 #' Description.
 #'
-#' @format A data frame with 12934 rows and 23 variables:
+#' @format A data frame with 14496 rows and 25 variables:
 #' \describe{
 #'   \item{ unique_id }{  integer }
 #'   \item{ date }{  Date }
 #'   \item{ admin1 }{  character }
 #'   \item{ admin2 }{  character }
 #'   \item{ market }{  character }
+#'   \item{ market_id }{  numeric }
 #'   \item{ latitude }{  numeric }
 #'   \item{ longitude }{  numeric }
 #'   \item{ category }{  character }
 #'   \item{ commodity }{  character }
+#'   \item{ commodity_id }{  numeric }
 #'   \item{ unit }{  character }
 #'   \item{ priceflag }{  character }
 #'   \item{ pricetype }{  character }
