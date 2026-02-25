@@ -8,8 +8,10 @@
 #' @export
 generate_welcome_message <- function() {
   HTML(
-    '<h4>Welcome to the Kenya Food Prices Dashboard!</h4>
-    <p>This interactive tool allows users to explore detailed food price data across different regions and markets in Kenya. The data provided here is sourced from the <strong>World Food Programme\'s Price Database</strong>, which is part of their efforts to monitor food prices in different countries and contribute to global food security. Navigate to other tabs to visualize price trends, compare prices of different commodities, or view the geographical distribution of food prices. This dashboard aims to provide valuable insights for researchers, policymakers, and anyone interested in the dynamics of food markets in Kenya.</p>'
+    '<div class="kfp-welcome">
+      <h4 class="kfp-welcome-title">Welcome to the Kenya Food Prices Dashboard!</h4>
+      <p class="kfp-welcome-text">This interactive tool allows users to explore detailed food price data across different regions and markets in Kenya. The data provided here is sourced from the <strong>World Food Programme\'s Price Database</strong>, which is part of their efforts to monitor food prices in different countries and contribute to global food security. Navigate to other tabs to visualize price trends, compare prices of different commodities, or view the geographical distribution of food prices. This dashboard aims to provide valuable insights for researchers, policymakers, and anyone interested in the dynamics of food markets in Kenya.</p>
+    </div>'
   )
 }
 

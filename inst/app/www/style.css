@@ -1,32 +1,113 @@
+/* --------- Theme tokens (reuse existing palette) --------- */
+:root {
+  --kfp-accent: #00a2ab;
+  --kfp-accent-2: #088;
+  --kfp-text: #345151;
+  --kfp-bg: #ffffff;
+  --kfp-nav-bg: #000000;
+  --kfp-border: #111111;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 nav ul li:hover{
-  background-color:#088;
-  border-color: #111;
+  background-color: var(--kfp-accent-2);
+  border-color: var(--kfp-border);
 }
 
 .navbar {
   border-style: solid;
   border-width: 0 1px 1px 1px;
-  border-color: black;
-  color: white !important;
-  background-color:#000;/* #2c3e50;*/
+  border-color: var(--kfp-border);
+  background-color: var(--kfp-nav-bg);
+  color: #ffffff !important;
   padding: 10px 15px;
   margin-bottom: 10px;
-  text-align: center;
-  font-size: 20px;
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 1px;
   border-radius: 4px;
-  transition: all 0.2s ease-in-out;
+  transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
   position: relative;
+}
+
+/* Bootstrap navbarPage specifics */
+.navbar .navbar-brand,
+.navbar .navbar-nav > li > a {
+  color: #ffffff !important;
+  font-size: 16px;
+  letter-spacing: 0.5px;
+}
+
+.navbar .navbar-brand {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 20px;
+  line-height: 1.2;
+  padding-top: 15px;
+  padding-bottom: 15px;
+}
+
+/* Ensure brand/title stays visible for Bootstrap variants */
+.navbar-default .navbar-brand,
+.navbar-inverse .navbar-brand {
+  color: #ffffff !important;
+}
+
+.navbar .navbar-nav > li > a:hover,
+.navbar .navbar-nav > li > a:focus {
+  background-color: var(--kfp-accent-2) !important;
+  color: #ffffff !important;
+}
+
+.navbar .navbar-nav > .active > a,
+.navbar .navbar-nav > .active > a:hover,
+.navbar .navbar-nav > .active > a:focus {
+  background-color: var(--kfp-accent) !important;
+  color: #ffffff !important;
 }
 
 
 body {
-	background-color: white;
-	color: #345151 !important;
-	font-family: Georgia, Times, serif, Bookman;
-	font-size: 16px !important;
+  background-color: var(--kfp-bg);
+  color: var(--kfp-text) !important;
+  font-family: Georgia, Times, serif, Bookman;
+  font-size: 16px !important;
+  line-height: 1.4;
+}
+
+a {
+  color: var(--kfp-accent);
+}
+
+a:hover,
+a:focus {
+  color: var(--kfp-accent-2);
+}
+
+:focus-visible {
+  outline: 2px solid var(--kfp-accent);
+  outline-offset: 2px;
+}
+
+/* Welcome message block */
+.kfp-welcome {
+  margin: 10px 0 15px;
+  padding: 10px 12px;
+  border-left: 4px solid var(--kfp-accent);
+  background-color: rgba(0, 162, 171, 0.06);
+  border-radius: 4px;
+}
+
+.kfp-welcome-title {
+  margin-top: 0;
+  margin-bottom: 6px;
+  color: #111111 !important;
+  font-weight: 700;
+}
+
+.kfp-welcome-text {
+  margin: 0;
+  color: var(--kfp-text) !important;
 }
 
 
@@ -51,7 +132,7 @@ h6 {
 	margin: .75em 0;
 	text-transform: none;
 	font-weight: 200;
-	color: #00a2ab !important;
+  color: var(--kfp-accent) !important;
 }
 h1,
 h2 {
@@ -63,7 +144,7 @@ h6 {
 }
 
 div.quarto-post h3 a {
-    color: #00a2ab !important;
+  color: var(--kfp-accent) !important;
     text-decoration: none; /* Or any other decoration you prefer */
 }
 
@@ -91,22 +172,51 @@ div.quarto-post h3 a {
    
 }
 
-.nav-tabs > li.active > a, .nav-tabs > li.active > a:focus, .nav-tabs > li.active > a:hover {
-    cursor: default;
-    background-color: transparent !important;
-    font-weight: bold;
-    border: transparent !important;
-    border-top-color: transparent !important;
-    border-right-color: transparent !important;
-    border-bottom-color: transparent !important;
-    border-left-color: : transparent !important;
-    border-image-outset: 0 !important;
-    border-image-repeat: stretch !important;
-    border-image-slice: 100% !important;
-    border-image-source: none !important;
-    border-image-width: 1 !important;
-    border-bottom-style: solid;
-    border-bottom-width: 2px;
+.nav-tabs {
+  border-bottom: 1px solid rgba(17, 17, 17, 0.2);
+}
+
+.nav-tabs > li > a {
+  border: none !important;
+  color: var(--kfp-text);
+}
+
+.nav-tabs > li > a:hover,
+.nav-tabs > li > a:focus {
+  background-color: rgba(0, 136, 136, 0.08) !important;
+  border: none !important;
+}
+
+.nav-tabs > li.active > a,
+.nav-tabs > li.active > a:focus,
+.nav-tabs > li.active > a:hover {
+  cursor: default;
+  background-color: transparent !important;
+  font-weight: 700;
+  color: var(--kfp-accent) !important;
+  border: none !important;
+  border-bottom: 2px solid var(--kfp-accent) !important;
+}
+
+/* Form controls (selectInput etc.) */
+.form-control {
+  border-radius: 4px;
+  border-color: rgba(17, 17, 17, 0.25);
+}
+
+.form-control:focus {
+  border-color: var(--kfp-accent);
+  box-shadow: none;
+}
+
+.selectize-control.single .selectize-input {
+  border-radius: 4px;
+  border-color: rgba(17, 17, 17, 0.25);
+}
+
+.selectize-control.single .selectize-input.focus {
+  border-color: var(--kfp-accent);
+  box-shadow: none;
 }
 
 
@@ -115,6 +225,15 @@ div.quarto-post h3 a {
   max-width: 100% !important;
   margin: auto;
   height: auto !important;
+}
+
+@media (max-width: 768px) {
+  .navbar .navbar-brand {
+    font-size: 14px;
+  }
+  body {
+    font-size: 15px !important;
+  }
 }
 
 .shiny-plot-output .ggiraph-svg{
