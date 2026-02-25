@@ -68,6 +68,13 @@ load("data-raw/kenya_counties.rda")
 
 library(sf)
 
+# `kenya_counties` is stored as a data.table with an `sfc_*` geometry column.
+# Make sure it has a CRS; otherwise `st_transform()` / `st_join()` will fail.
+# The counties layer is in UTM zone 37S (EPSG:17037).
+if (is.na(sf::st_crs(kenya_counties$geometry))) {
+  sf::st_crs(kenya_counties$geometry) <- 17037
+}
+
 # Function to assign counties to GPS coordinates
 assign_counties <- function(data_points, counties_sf) {
   # Convert data points to an sf object
