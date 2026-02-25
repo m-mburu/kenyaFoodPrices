@@ -2,7 +2,7 @@
 #'
 #' Description.
 #'
-#' @format A data frame with 184 rows and 2 variables:
+#' @format A data frame with 221 rows and 2 variables:
 #' \describe{
 #'   \item{ county }{  character }
 #'   \item{ unique_id }{  integer }
