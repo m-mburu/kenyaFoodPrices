@@ -1,6 +1,7 @@
 name: R Data Update and package compilation
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
