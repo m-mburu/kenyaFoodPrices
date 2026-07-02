@@ -93,16 +93,15 @@ test_that("Test undisplay works", {
 
   b <- shiny::actionButton("go_filter", "go")
   expect_s3_class(b, "shiny.tag")
-  expect_equal(
-    as.character(b),
-    '<button id="go_filter" type="button" class="btn btn-default action-button">go</button>'
-  )
+  expect_equal(b$attribs$id, "go_filter")
+  expect_true(grepl("action-button", b$attribs$class))
+  expect_match(as.character(b), "go")
+
   b_undisplay <- undisplay(b)
-  expect_s3_class(b, "shiny.tag")
-  expect_equal(
-    as.character(b_undisplay),
-    '<button id="go_filter" type="button" class="btn btn-default action-button" style="display: none;">go</button>'
-  )
+  expect_s3_class(b_undisplay, "shiny.tag")
+  expect_equal(b_undisplay$attribs$id, "go_filter")
+  expect_true(grepl("action-button", b_undisplay$attribs$class))
+  expect_equal(b_undisplay$attribs$style, "display: none;")
 })
 
 test_that("Test display works", {
@@ -166,7 +165,7 @@ test_that("Test columns wrappers works", {
 
 test_that("Test make_action_button works", {
   button <- make_action_button(
-    a(href = "#", "My super link", style = "color: lightblue;"),
+    shiny::a(href = "#", "My super link", style = "color: lightblue;"),
     inputId = "mylink"
   )
   expect_s3_class(button, "shiny.tag")

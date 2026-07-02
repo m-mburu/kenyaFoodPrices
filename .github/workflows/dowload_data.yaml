@@ -17,12 +17,7 @@ jobs:
       TZ: "Africa/Nairobi"
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
-
-    - name: Install system dependencies for tidyverse and devtools
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y libcurl4-openssl-dev libxml2-dev libssl-dev libicu-dev libblas-dev liblapack-dev zlib1g-dev libudunits2-dev libgdal-dev libgeos-dev libproj-dev  libharfbuzz-dev libfribidi-dev libzmq3-dev libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev build-essential libcurl4-openssl-dev libxml2-dev libssl-dev libfontconfig1-dev
+      uses: actions/checkout@v4
 
     - name: Set up Pandoc
       uses: r-lib/actions/setup-pandoc@v2
@@ -31,12 +26,24 @@ jobs:
       uses: r-lib/actions/setup-r@v2
       with:
         r-version: '4.3.3'  # Adjust as necessary
+        use-public-rspm: true
 
-    - name: Install R packages including devtools
+    - name: Install and cache R packages
+      uses: r-lib/actions/setup-r-dependencies@v2
       env:
         GITHUB_PAT: ${{secrets.GH_PAT }}
-      run: |
-        Rscript dev/install_R_packages.R
+      with:
+        cache-version: 1
+        extra-packages: |
+          any::checkhelper
+          any::devtools
+          any::ggthemes
+          any::remotes
+          any::rsconnect
+          any::sf
+          any::stringr
+          any::usethis
+          github::dickoa/rhdx
 
     - name: Run R script
       run: |
@@ -46,6 +53,7 @@ jobs:
       run: |
         Rscript -e "devtools::build()"
         Rscript -e "devtools::install()"
+
     - name: Run RMD
       run: |
         Rscript -e "rmarkdown::render('README.Rmd', output_format = 'github_document')"
@@ -77,5 +85,3 @@ jobs:
         RS_CONNECT_TOKEN: ${{ secrets.RS_CONNECT_TOKEN }}
         RS_CONNECT_SECRET: ${{ secrets.RS_CONNECT_SECRET }}
       run: Rscript dev/deploy.R
-
-
