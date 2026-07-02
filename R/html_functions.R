@@ -21,10 +21,9 @@ generate_welcome_message <- function() {
 #'
 #' This function creates a line plot of prices for a specified commodity and price type.
 #'
-#' @param data A data.table containing the food price data.
+#' @param mean_prices A data frame containing `year_quarter_date` and `mean_price`.
 #' @param commodity The commodity to filter the data by.
 #' @param pricetype The price type to filter the data by.
-#' @param palette The color palette to use for the plot. Default is "Set1".
 #' @importFrom plotly ggplotly
 #' @return A plotly object containing the line plot.
 #' @export

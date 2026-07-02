@@ -5,7 +5,7 @@
 \alias{kenya_counties_ids}
 \title{kenya_counties_ids}
 \format{
-A data frame with 62 rows and 2 variables:
+A data frame with 222 rows and 2 variables:
 \describe{
   \item{ county }{  character }
   \item{ unique_id }{  integer }

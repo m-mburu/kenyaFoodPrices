@@ -247,3 +247,133 @@ div.quarto-post h3 a {
 }
 
 
+
+/* --------- Dashboard layout --------- */
+.kfp-filter-band {
+  max-width: 1400px;
+  margin: 0 auto 16px;
+  padding: 14px 16px 6px;
+  background: #f7faf9;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  border-radius: 6px;
+}
+
+.kfp-filter-band label {
+  font-family: Lato, Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #345151;
+  text-transform: uppercase;
+}
+
+.kfp-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(130px, 1fr));
+  gap: 12px;
+  margin: 4px 0 16px;
+}
+
+.kfp-kpi {
+  min-height: 108px;
+  padding: 14px;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  border-left: 4px solid var(--kfp-accent);
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.kfp-kpi-label {
+  font-family: Lato, Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: #5f7474;
+  text-transform: uppercase;
+}
+
+.kfp-kpi-value {
+  margin-top: 7px;
+  font-family: Lato, Helvetica, Arial, sans-serif;
+  font-size: 25px;
+  font-weight: 700;
+  line-height: 1.12;
+  color: #132f2f;
+  overflow-wrap: anywhere;
+}
+
+.kfp-kpi-note {
+  margin-top: 7px;
+  font-size: 13px;
+  color: #5f7474;
+}
+
+.kfp-kpi.kfp-up {
+  border-left-color: #c94a32;
+}
+
+.kfp-kpi.kfp-down {
+  border-left-color: #23845f;
+}
+
+.kfp-panel {
+  min-height: 120px;
+  margin-bottom: 16px;
+  padding: 14px;
+  background: #ffffff;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  border-radius: 6px;
+}
+
+.kfp-panel h4 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #132f2f !important;
+}
+
+.kfp-panel .dataTables_wrapper {
+  font-size: 13px;
+}
+
+.kfp-panel table.dataTable thead th {
+  font-family: Lato, Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  color: #132f2f;
+  background: #eef5f3;
+  border-bottom: 1px solid rgba(17, 17, 17, 0.18);
+}
+
+.kfp-panel table.dataTable tbody td {
+  vertical-align: middle;
+}
+
+.leaflet-container {
+  border-radius: 4px;
+}
+
+@media (max-width: 1200px) {
+  .kfp-kpi-grid {
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .kfp-filter-band {
+    padding: 12px 12px 2px;
+  }
+
+  .kfp-kpi-grid {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+
+  .kfp-kpi-value {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .kfp-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}

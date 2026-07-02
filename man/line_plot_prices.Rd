@@ -7,13 +7,11 @@
 line_plot_prices(mean_prices, commodity, pricetype)
 }
 \arguments{
+\item{mean_prices}{A data frame containing `year_quarter_date` and `mean_price`.}
+
 \item{commodity}{The commodity to filter the data by.}
 
 \item{pricetype}{The price type to filter the data by.}
-
-\item{data}{A data.table containing the food price data.}
-
-\item{palette}{The color palette to use for the plot. Default is "Set1".}
 }
 \value{
 A plotly object containing the line plot.

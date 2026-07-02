@@ -13,3 +13,7 @@ $run_dev.*
 ^README\.Rmd$
 ^app\.R$
 ^rsconnect$
+^\.git
+^\.codex
+^\.agents
+^R/_disable_autoload\.R$
