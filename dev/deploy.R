@@ -22,7 +22,7 @@ Sys.setenv(
 
 ## Run checks ----
 ## Check the package before sending to prod
-install.packages("stringr", repos = getOption("repos"))
+install.packages(c("stringr", "sf"), repos = getOption("repos"))
 #golem::add_shinyserver_file()
 
 
