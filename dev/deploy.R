@@ -1,5 +1,5 @@
 cran_repo <- "https://cloud.r-project.org"
-options(repos = c(CRAN = cran_repo))
+options(repos = c(RSPM = cran_repo, CRAN = cran_repo))
 Sys.setenv(RSPM = cran_repo)
 rsconnect::setAccountInfo(name='mmburu',
                           token=Sys.getenv("RS_CONNECT_TOKEN"),
