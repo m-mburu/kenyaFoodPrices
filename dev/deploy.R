@@ -22,7 +22,11 @@ install.packages("stringr")
 
 
 # Deploy to Posit Connect or ShinyApps.io
-# In command line.
+rsconnect::setAccountInfo(name='mmburu',
+                          token=Sys.getenv("RS_CONNECT_TOKEN"),
+                          secret= Sys.getenv("RS_CONNECT_SECRET"))
+
+#golem::add_shinyappsio_file()
 rsconnect::deployApp(
   appName = desc::desc_get_field("Package"),
   appTitle = desc::desc_get_field("Package"),
