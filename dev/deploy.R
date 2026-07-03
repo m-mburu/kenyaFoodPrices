@@ -21,5 +21,7 @@ rsconnect::deployApp(
   ),
   appId = rsconnect::deployments(".")$appID,
   lint = FALSE,
-  forceUpdate = TRUE
+  forceUpdate = TRUE,
+  packageRepositoryResolutionR = "lax",
+  dependencyResolution = "library"
 )
