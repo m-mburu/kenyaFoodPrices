@@ -13,9 +13,16 @@
 
 # Test your app
 
+repo_url <- "https://cloud.r-project.org"
+options(repos = c(RSPM = repo_url, CRAN = repo_url))
+Sys.setenv(
+  RSPM = repo_url,
+  RENV_CONFIG_REPOS_OVERRIDE = paste0("RSPM=", repo_url, ";CRAN=", repo_url)
+)
+
 ## Run checks ----
 ## Check the package before sending to prod
-install.packages("stringr")
+install.packages("stringr", repos = getOption("repos"))
 #golem::add_shinyserver_file()
 
 
@@ -41,5 +48,7 @@ rsconnect::deployApp(
   ),
   appId = rsconnect::deployments(".")$appID,
   lint = FALSE,
-  forceUpdate = TRUE
+  forceUpdate = TRUE,
+  packageRepositoryResolutionR = "lax",
+  dependencyResolution = "library"
 )
