@@ -16,7 +16,7 @@
 ## Run checks ----
 ## Check the package before sending to prod
 install.packages("stringr")
-golem::add_shinyserver_file()
+#golem::add_shinyserver_file()
 
 
 
