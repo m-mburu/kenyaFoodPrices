@@ -8,12 +8,22 @@
 [![R-CMD-check](https://github.com/m-mburu/kenyaFoodPrices/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/m-mburu/kenyaFoodPrices/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
-This is a package to visualize food prices in Kenya. The data is sourced
-from the World Food Programme (WFP) and is available on the
-[Humanitarian Data Exchange (HDX)
-platform](https://data.humdata.org/dataset/wfp-food-prices-for-kenya?).
-The app is hosted on shinyapps.io and can be accessed
+This package visualizes food prices and climate conditions in Kenya.
+Food-price data is sourced from the World Food Programme (WFP) through
+the [Humanitarian Data
+Exchange](https://data.humdata.org/dataset/wfp-food-prices-for-kenya?).
+Rainfall and vegetation indicators originate from WFP and use the World
+Bank [Joint Food Security
+Monitor](https://microdata.worldbank.org/catalog/8115) harmonization to
+current Kenyan administrative boundaries. The app is hosted on
+shinyapps.io and can be accessed
 [here](https://mmburu.shinyapps.io/kenyaFoodPrices/).
+
+The Climate tab provides county rainfall and vegetation choropleths
+first, followed by county trends and exploratory lagged relationships
+with the selected commodity price. See
+[CLIMATE_IMPLEMENTATION.md](CLIMATE_IMPLEMENTATION.md) for the download,
+processing, data structure, visual design and limitations.
 
 ## Installation
 

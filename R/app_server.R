@@ -252,6 +252,13 @@ app_server <- function(input, output, session) {
     dt
   })
 
+  climate_module_server(
+    "climate",
+    price_data = base_filtered_data,
+    price_column = price_column,
+    price_unit_label = price_unit_label
+  )
+
   monthly_summary <- reactive({
     dt <- filtered_data()
     req(nrow(dt) > 0)

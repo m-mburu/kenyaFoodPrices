@@ -17,3 +17,4 @@ $run_dev.*
 ^\.codex
 ^\.agents
 ^R/_disable_autoload\.R$
+^CLIMATE_IMPLEMENTATION\.md$
