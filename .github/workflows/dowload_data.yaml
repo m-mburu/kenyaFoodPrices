@@ -74,7 +74,7 @@ jobs:
 
     - name: Validate locked deployment dependencies
       run: |
-        Rscript -e "tool_library <- normalizePath(Sys.getenv('WORKFLOW_R_LIBRARY')); libraries <- normalizePath(.libPaths()); stopifnot(tool_library %in% libraries, match(tool_library, libraries) > 1L); rsconnect::appDependencies('.', dependencyResolution = 'strict')"
+        Rscript -e "tool_library <- normalizePath(Sys.getenv('WORKFLOW_R_LIBRARY')); libraries <- normalizePath(.libPaths()); stopifnot(tool_library %in% libraries, match(tool_library, libraries) > 1L); rsconnect::appDependencies('.')"
 
     - name: Commit files
       run: |

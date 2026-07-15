@@ -25,8 +25,9 @@ rsconnect::setAccountInfo(name='mmburu',
                           token=Sys.getenv("RS_CONNECT_TOKEN"),
                           secret= Sys.getenv("RS_CONNECT_SECRET"))
 
-#golem::add_shinyappsio_file()
-rsconnect::deployApp(
+# rsconnect 1.7 uses renv.lock strictly by default. Newer rsconnect releases
+# expose equivalent controls as explicit arguments, so pass them when present.
+deploy_args <- list(
   appName = desc::desc_get_field("Package"),
   appTitle = desc::desc_get_field("Package"),
   appFiles = c(
@@ -41,7 +42,17 @@ rsconnect::deployApp(
   ),
   appId = rsconnect::deployments(".")$appID,
   lint = FALSE,
-  forceUpdate = TRUE,
+  forceUpdate = TRUE
+)
+
+optional_deploy_args <- list(
   packageRepositoryResolutionR = "lax",
   dependencyResolution = "strict"
 )
+supported_args <- intersect(
+  names(optional_deploy_args),
+  names(formals(rsconnect::deployApp))
+)
+deploy_args[supported_args] <- optional_deploy_args[supported_args]
+
+do.call(rsconnect::deployApp, deploy_args)
