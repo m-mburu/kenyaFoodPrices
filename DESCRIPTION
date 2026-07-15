@@ -1,9 +1,10 @@
 Package: kenyaFoodPrices
-Title: WFP Kenya Food Prices
+Title: Kenya Food Prices and Climate Conditions
 Version: 0.0.0.01
 Authors@R: 
     person("Moses", "Mburu", , "mmburu20@gmail.com", role = c("cre", "aut"))
-Description: An app to visualize food prices in Kenya.
+Description: An app to visualize food prices, rainfall, and vegetation
+    conditions in Kenya and explore lagged climate-price relationships.
 License: Apache License (>= 2)
 URL: https://github.com/m-mburu/kenyaFoodPrices
 BugReports: https://github.com/m-mburu/kenyaFoodPrices/issues
@@ -20,9 +21,11 @@ Imports:
     lubridate,
     plotly,
     scales,
+    sf,
     shiny (>= 1.8.1.1),
     shinycssloaders
 Suggests: 
+    jsonlite,
     knitr,
     rmarkdown,
     testthat (>= 3.0.0)
@@ -31,4 +34,5 @@ VignetteBuilder:
 Config/testthat/edition: 3
 Encoding: UTF-8
 LazyData: true
+LazyDataCompression: xz
 Config/roxygen2/version: 8.0.0

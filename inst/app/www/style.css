@@ -377,3 +377,76 @@ div.quarto-post h3 a {
     grid-template-columns: 1fr;
   }
 }
+
+/* --------- Climate overview and details --------- */
+.kfp-climate-intro {
+  margin: 4px 0 14px;
+  padding: 16px 18px;
+  color: #ffffff;
+  background: linear-gradient(115deg, #174b4e, #0b777c);
+  border-radius: 6px;
+}
+
+.kfp-climate-intro h3 {
+  margin: 0 0 6px;
+  color: #ffffff !important;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.kfp-climate-intro p {
+  max-width: 900px;
+  margin: 0;
+}
+
+.kfp-climate-controls {
+  margin-bottom: 14px;
+  padding: 14px 16px 8px;
+  background: #f7faf9;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  border-radius: 6px;
+}
+
+.kfp-climate-controls label {
+  font-family: Lato, Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #345151;
+  text-transform: uppercase;
+}
+
+.kfp-context-note {
+  margin: 4px 0 8px;
+  padding: 9px 11px;
+  color: #536868;
+  background: rgba(0, 162, 171, 0.06);
+  border-left: 3px solid var(--kfp-accent);
+  border-radius: 3px;
+  font-size: 13px;
+}
+
+.kfp-climate-kpis {
+  grid-template-columns: repeat(6, minmax(135px, 1fr));
+}
+
+.kfp-climate-kpis .kfp-kpi {
+  min-height: 116px;
+}
+
+@media (max-width: 1200px) {
+  .kfp-climate-kpis {
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .kfp-climate-kpis {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+}
+
+@media (max-width: 480px) {
+  .kfp-climate-kpis {
+    grid-template-columns: 1fr;
+  }
+}

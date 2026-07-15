@@ -126,6 +126,13 @@ app_ui <- function(request) {
       ),
 
       tabPanel(
+        "Climate",
+        fluidPage(
+          climate_module_ui("climate")
+        )
+      ),
+
+      tabPanel(
         "Compare",
         fluidPage(
           fluidRow(
