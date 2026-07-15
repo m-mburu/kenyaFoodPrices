@@ -11,7 +11,7 @@
 #### CURRENT FILE: DEPLOY SCRIPT #####
 ######################################
 
-# Test your app
+# Configure the package repository recorded in the deployment manifest.
 
 repo_url <- "https://cloud.r-project.org"
 options(repos = c(RSPM = repo_url, CRAN = repo_url))
@@ -19,14 +19,6 @@ Sys.setenv(
   RSPM = repo_url,
   RENV_CONFIG_REPOS_OVERRIDE = paste0("RSPM=", repo_url, ";CRAN=", repo_url)
 )
-
-## Run checks ----
-## Check the package before sending to prod
-install.packages(c("stringr", "sf"), repos = getOption("repos"))
-#golem::add_shinyserver_file()
-
-
-
 
 # Deploy to Posit Connect or ShinyApps.io
 rsconnect::setAccountInfo(name='mmburu',
@@ -44,11 +36,12 @@ rsconnect::deployApp(
     "data/",
     "NAMESPACE",
     "DESCRIPTION",
+    "renv.lock",
     "app.R"
   ),
   appId = rsconnect::deployments(".")$appID,
   lint = FALSE,
   forceUpdate = TRUE,
   packageRepositoryResolutionR = "lax",
-  dependencyResolution = "library"
+  dependencyResolution = "strict"
 )
