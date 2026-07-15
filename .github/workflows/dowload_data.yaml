@@ -48,7 +48,7 @@ jobs:
 
     - name: Install workflow-only packages
       run: |
-        Rscript -e "renv::install(c('devtools', 'ggthemes', 'rsconnect', 'usethis', 'dickoa/rhdx'), prompt = FALSE)"
+        Rscript -e "renv::install(c('checkhelper', 'devtools', 'ggthemes', 'rsconnect', 'usethis', 'dickoa/rhdx'), prompt = FALSE)"
 
     - name: Refresh food-price data
       run: Rscript data-raw/my_dataset.R
