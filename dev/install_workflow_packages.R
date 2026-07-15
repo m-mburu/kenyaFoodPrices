@@ -23,14 +23,22 @@ workflow_packages <- c(
   "devtools",
   "ggthemes",
   "remotes",
-  "rsconnect",
   "usethis"
 )
+rsconnect_version <- "1.7.0"
 
 install.packages(
   workflow_packages,
   lib = tool_library,
   dependencies = NA
+)
+
+remotes::install_version(
+  "rsconnect",
+  version = rsconnect_version,
+  lib = tool_library,
+  dependencies = NA,
+  upgrade = "never"
 )
 
 remotes::install_github(
@@ -40,7 +48,7 @@ remotes::install_github(
   upgrade = "never"
 )
 
-required_packages <- c(workflow_packages, "rhdx")
+required_packages <- c(workflow_packages, "rhdx", "rsconnect")
 missing_packages <- required_packages[
   !vapply(required_packages, requireNamespace, logical(1), quietly = TRUE)
 ]
@@ -49,6 +57,15 @@ if (length(missing_packages)) {
   stop(
     "Failed to install workflow packages: ",
     paste(missing_packages, collapse = ", "),
+    call. = FALSE
+  )
+}
+
+installed_rsconnect_version <- as.character(utils::packageVersion("rsconnect"))
+if (!identical(installed_rsconnect_version, rsconnect_version)) {
+  stop(
+    "Expected rsconnect ", rsconnect_version,
+    ", installed ", installed_rsconnect_version, ".",
     call. = FALSE
   )
 }
