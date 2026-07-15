@@ -109,14 +109,8 @@ kenya_counties_ids[, geometry := NULL]
 ke_food_prices <- merge(ke_food_prices, kenya_counties_ids, by = "unique_id", all.x = TRUE)
 usethis::use_data(ke_food_prices, overwrite = TRUE)
 
-checkhelper::fix_dataset_doc("ke_food_prices", overwrite = TRUE)
-
-
 usethis::use_data(kenya_counties_ids, overwrite = TRUE)
-
-checkhelper::fix_dataset_doc("kenya_counties_ids", overwrite = TRUE)
 
 ## kenya counties
 usethis::use_data(kenya_counties, overwrite = TRUE)
-checkhelper::fix_dataset_doc("kenya_counties", overwrite = TRUE)
 
