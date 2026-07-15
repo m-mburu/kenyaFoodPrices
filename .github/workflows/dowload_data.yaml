@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       TZ: "Africa/Nairobi"
+      WORKFLOW_R_LIBRARY: ${{ runner.temp }}/workflow-library
+      RENV_CONFIG_EXTERNAL_LIBRARIES: ${{ runner.temp }}/workflow-library
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -48,7 +50,7 @@ jobs:
 
     - name: Install workflow-only packages
       run: |
-        Rscript -e "renv::install(c('checkhelper', 'devtools', 'ggthemes', 'rsconnect', 'usethis', 'dickoa/rhdx'), prompt = FALSE)"
+        Rscript -e "tool_library <- Sys.getenv('WORKFLOW_R_LIBRARY'); dir.create(tool_library, recursive = TRUE, showWarnings = FALSE); renv::install(c('checkhelper', 'devtools', 'ggthemes', 'rsconnect', 'usethis', 'dickoa/rhdx'), library = tool_library, prompt = FALSE)"
 
     - name: Refresh food-price data
       run: Rscript data-raw/my_dataset.R
@@ -64,6 +66,10 @@ jobs:
     - name: Run RMD
       run: |
         Rscript -e "rmarkdown::render('README.Rmd', output_format = 'github_document')"
+
+    - name: Validate locked deployment dependencies
+      run: |
+        Rscript -e "tool_library <- normalizePath(Sys.getenv('WORKFLOW_R_LIBRARY')); libraries <- normalizePath(.libPaths()); stopifnot(tool_library %in% libraries, match(tool_library, libraries) > 1L); rsconnect::appDependencies('.', dependencyResolution = 'strict')"
 
     - name: Commit files
       run: |
