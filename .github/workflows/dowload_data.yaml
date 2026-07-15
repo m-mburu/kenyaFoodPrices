@@ -29,23 +29,16 @@ jobs:
       with:
         r-version: '4.5.0'
 
-    - name: Install and cache R packages
-      uses: r-lib/actions/setup-r-dependencies@v2
+    - name: Restore locked application packages
+      uses: r-lib/actions/setup-renv@v2
       env:
         GITHUB_PAT: ${{secrets.GH_PAT }}
       with:
-        cache-version: 3
-        extra-packages: |
-          any::checkhelper
-          any::devtools
-          any::ggthemes
-          any::jsonlite
-          any::remotes
-          any::rsconnect
-          any::sf
-          any::stringr
-          any::usethis
-          github::dickoa/rhdx
+        cache-version: 1
+
+    - name: Install workflow-only packages
+      run: |
+        Rscript -e "renv::install(c('devtools', 'ggthemes', 'rsconnect', 'usethis', 'dickoa/rhdx'), prompt = FALSE)"
 
     - name: Refresh food-price data
       run: Rscript data-raw/my_dataset.R
@@ -77,16 +70,6 @@ jobs:
       with:
           github_token: ${{ secrets.GH_PAT}}
           branch: main
-
-    - name: Install kenyaFoodPrices package
-      env:
-        GITHUB_PAT: ${{secrets.GH_PAT }}
-      run: |
-        Rscript -e "remotes::install_github('m-mburu/kenyaFoodPrices')"
-
-    - name: Pin terra for shinyapps.io GDAL
-      run: |
-        Rscript -e "remotes::install_version('terra', version = '1.8-93', repos = 'https://cran.r-project.org', upgrade = 'never')"
 
     - name: Deploy Shiny App
       env:
