@@ -48,12 +48,12 @@ jobs:
 
     - name: Configure workflow-only R library
       run: |
+        mkdir -p "$RUNNER_TEMP/workflow-library"
         echo "WORKFLOW_R_LIBRARY=$RUNNER_TEMP/workflow-library" >> "$GITHUB_ENV"
         echo "RENV_CONFIG_EXTERNAL_LIBRARIES=$RUNNER_TEMP/workflow-library" >> "$GITHUB_ENV"
 
     - name: Install workflow-only packages
-      run: |
-        Rscript -e "tool_library <- Sys.getenv('WORKFLOW_R_LIBRARY'); dir.create(tool_library, recursive = TRUE, showWarnings = FALSE); renv::install(c('checkhelper', 'devtools', 'ggthemes', 'rsconnect', 'usethis', 'dickoa/rhdx'), library = tool_library, prompt = FALSE)"
+      run: R_LIBS_SITE="$WORKFLOW_R_LIBRARY" R_LIBS_USER="$WORKFLOW_R_LIBRARY" Rscript --vanilla dev/install_workflow_packages.R
 
     - name: Refresh food-price data
       run: Rscript data-raw/my_dataset.R
