@@ -29,6 +29,11 @@ jobs:
       with:
         r-version: '4.5.0'
 
+    - name: Install spatial runtime libraries
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install --yes --no-install-recommends libproj25
+
     - name: Restore locked application packages
       uses: r-lib/actions/setup-renv@v2
       env:
