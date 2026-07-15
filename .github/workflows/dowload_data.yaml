@@ -54,7 +54,7 @@ jobs:
 
     - name: Install workflow-only packages
       env:
-        GITHUB_PAT: ${{ github.token }}
+        GITHUB_PAT: ${{ secrets.GH_PAT }}
       run: R_LIBS_SITE="$WORKFLOW_R_LIBRARY" R_LIBS_USER="$WORKFLOW_R_LIBRARY" Rscript --vanilla dev/install_workflow_packages.R
 
     - name: Refresh food-price data
