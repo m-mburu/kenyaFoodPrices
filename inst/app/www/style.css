@@ -151,7 +151,7 @@ div.quarto-post h3 a {
 
 .ggiraph-svg, .girafe{
   font-size: 15px;
-  max-width: 720px !important;
+  max-width: none !important;
   margin:auto;
   width: 100% !important;
   height: auto !important;
@@ -348,7 +348,8 @@ div.quarto-post h3 a {
   vertical-align: middle;
 }
 
-.leaflet-container {
+.kfp-panel .girafe,
+.kfp-panel .girafe_container_std {
   border-radius: 4px;
 }
 

@@ -2,7 +2,7 @@
 #'
 #' @param id Module identifier.
 #' @importFrom DT DTOutput
-#' @importFrom leaflet leafletOutput
+#' @importFrom ggiraph girafeOutput
 #' @importFrom plotly plotlyOutput
 #' @importFrom shiny NS column div fluidRow radioButtons selectInput tabPanel tabsetPanel tagList uiOutput
 #' @noRd
@@ -51,7 +51,7 @@ climate_module_ui <- function(id) {
         plot_panel(
           "Rainfall conditions",
           shinycssloaders::withSpinner(
-            leaflet::leafletOutput(ns("rainfall_map"), height = "520px"),
+            ggiraph::girafeOutput(ns("rainfall_map"), height = "520px"),
             color = "#00a2ab"
           )
         )
@@ -61,7 +61,7 @@ climate_module_ui <- function(id) {
         plot_panel(
           "Vegetation greenness",
           shinycssloaders::withSpinner(
-            leaflet::leafletOutput(ns("vegetation_map"), height = "520px"),
+            ggiraph::girafeOutput(ns("vegetation_map"), height = "520px"),
             color = "#00a2ab"
           )
         )
@@ -134,7 +134,7 @@ prepare_climate_geometry <- function(counties, county_lookup) {
 #' @param price_data Reactive returning filtered food-price records.
 #' @param price_column Reactive returning the active price column name.
 #' @param price_unit_label Reactive returning a display unit for prices.
-#' @importFrom leaflet addLegend addPolygons addProviderTiles clearControls clearShapes colorBin colorNumeric fitBounds highlightOptions labelOptions leaflet leafletProxy providers renderLeaflet
+#' @importFrom ggiraph renderGirafe
 #' @importFrom plotly layout plot_ly renderPlotly
 #' @importFrom shiny HTML moduleServer need observe observeEvent reactive renderUI req updateSelectInput validate
 #' @noRd
@@ -200,124 +200,53 @@ climate_module_server <- function(id, price_data, price_column, price_unit_label
       map_sf
     })
 
-    kenya_bounds <- sf::st_bbox(county_geometry)
-
-    base_climate_map <- function() {
-      leaflet::leaflet(county_geometry) %>%
-        leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron) %>%
-        leaflet::fitBounds(
-          kenya_bounds[["xmin"]], kenya_bounds[["ymin"]],
-          kenya_bounds[["xmax"]], kenya_bounds[["ymax"]]
-        )
-    }
-
-    output$rainfall_map <- leaflet::renderLeaflet(base_climate_map())
-    output$vegetation_map <- leaflet::renderLeaflet(base_climate_map())
-
-    update_climate_map <- function(map_id, type) {
+    render_climate_map <- function(type) {
       map_sf <- map_values()
       condition_view <- identical(input$map_measure, "condition")
+      plot <- climate_map_plot(
+        map_sf = map_sf,
+        type = type,
+        condition_view = condition_view,
+        selected_date = selected_date(),
+        climate_monthly = climate_monthly
+      )
+      selected <- if (identical(input$county, "All")) character() else input$county
 
-      if (identical(type, "rainfall")) {
-        value <- if (condition_view) map_sf$rainfall_z else map_sf$rainfall_mm
-        palette <- if (condition_view) {
-          leaflet::colorBin(
-            c("#8c510a", "#d8b365", "#f6e8c3", "#80cdc1", "#01665e"),
-            domain = value,
-            bins = c(-Inf, -1, -0.5, 0.5, 1, Inf),
-            na.color = "#d9d9d9"
-          )
-        } else {
-          leaflet::colorNumeric(
-            "Blues",
-            domain = climate_monthly$rainfall_mm,
-            na.color = "#d9d9d9"
-          )
-        }
-        legend_title <- if (condition_view) "Rainfall vs normal (z-score)" else "Rainfall (mm/dekad)"
-        popup <- paste0(
-          "<strong>", map_sf$county, "</strong>",
-          "<br>Month: ", format(selected_date(), "%B %Y"),
-          "<br>Average rainfall: ", format_number(map_sf$rainfall_mm, 1), " mm/dekad",
-          "<br>Standardised condition: ", format_number(map_sf$rainfall_z, 2),
-          "<br>Assessment: ", map_sf$rainfall_condition
-        )
-      } else {
-        value <- if (condition_view) map_sf$ndvi_z else map_sf$ndvi
-        palette <- if (condition_view) {
-          leaflet::colorBin(
-            c("#8c2d04", "#d94801", "#fdd49e", "#78c679", "#238443"),
-            domain = value,
-            bins = c(-Inf, -1, -0.5, 0.5, 1, Inf),
-            na.color = "#d9d9d9"
-          )
-        } else {
-          leaflet::colorNumeric(
-            "YlGn",
-            domain = c(0, 0.85),
-            na.color = "#d9d9d9"
-          )
-        }
-        legend_title <- if (condition_view) "Greenness vs normal (z-score)" else "Average NDVI"
-        popup <- paste0(
-          "<strong>", map_sf$county, "</strong>",
-          "<br>Month: ", format(selected_date(), "%B %Y"),
-          "<br>Average NDVI: ", format_number(map_sf$ndvi, 3),
-          "<br>Standardised condition: ", format_number(map_sf$ndvi_z, 2),
-          "<br>Assessment: ", map_sf$ndvi_condition
-        )
-      }
-
-      map_sf$display_value <- value
-      map_sf$popup <- popup
-
-      leaflet::leafletProxy(map_id, session = session, data = map_sf) %>%
-        leaflet::clearShapes() %>%
-        leaflet::clearControls() %>%
-        leaflet::addPolygons(
-          layerId = ~adm1_pcode,
-          color = "#ffffff",
-          weight = 1,
-          opacity = 1,
-          fillColor = ~palette(display_value),
-          fillOpacity = 0.78,
-          popup = ~popup,
-          label = ~county,
-          highlightOptions = leaflet::highlightOptions(
-            weight = 3,
-            color = "#263838",
-            fillOpacity = 0.88,
-            bringToFront = TRUE
-          ),
-          labelOptions = leaflet::labelOptions(direction = "auto")
-        ) %>%
-        leaflet::addLegend(
-          "bottomright",
-          pal = palette,
-          values = ~display_value,
-          title = legend_title,
-          opacity = 0.85
-        )
+      standard_girafe(
+        plot,
+        width_svg = 6.8,
+        height_svg = 6.4,
+        selectable = TRUE,
+        selected = selected
+      )
     }
 
-    shiny::observe({
+    output$rainfall_map <- ggiraph::renderGirafe({
       shiny::req(input$map_measure)
-      update_climate_map("rainfall_map", "rainfall")
-      update_climate_map("vegetation_map", "vegetation")
+      render_climate_map("rainfall")
     })
 
-    select_clicked_county <- function(click) {
-      if (!is.null(click$id) && click$id %in% county_lookup$adm1_pcode) {
-        shiny::updateSelectInput(session, "county", selected = click$id)
+    output$vegetation_map <- ggiraph::renderGirafe({
+      shiny::req(input$map_measure)
+      render_climate_map("vegetation")
+    })
+
+    select_clicked_county <- function(selected) {
+      if (length(selected) == 1L && selected %in% county_lookup$adm1_pcode) {
+        shiny::updateSelectInput(session, "county", selected = selected)
       }
     }
 
-    shiny::observeEvent(input$rainfall_map_shape_click, {
-      select_clicked_county(input$rainfall_map_shape_click)
-    })
-    shiny::observeEvent(input$vegetation_map_shape_click, {
-      select_clicked_county(input$vegetation_map_shape_click)
-    })
+    shiny::observeEvent(
+      input$rainfall_map_selected,
+      select_clicked_county(input$rainfall_map_selected),
+      ignoreInit = TRUE
+    )
+    shiny::observeEvent(
+      input$vegetation_map_selected,
+      select_clicked_county(input$vegetation_map_selected),
+      ignoreInit = TRUE
+    )
 
     output$climate_summary <- shiny::renderUI({
       values <- climate_monthly[date == selected_date()]

@@ -6,7 +6,7 @@
 #' @import ggplot2
 #' @importFrom dplyr %>%
 #' @importFrom DT datatable
-#' @importFrom leaflet addCircleMarkers addLegend addProviderTiles colorNumeric leaflet providers renderLeaflet
+#' @importFrom ggiraph renderGirafe
 #' @importFrom plotly layout plot_ly renderPlotly
 #' @importFrom shiny dateRangeInput div h4 need reactive renderUI req selectInput selectizeInput validate
 #' @noRd
@@ -524,37 +524,13 @@ app_server <- function(input, output, session) {
     ][order(-avg_price)]
   })
 
-  output$price_map <- renderLeaflet({
-    map_df <- map_data()
-    pal <- colorNumeric("YlOrRd", domain = map_df$avg_price)
-
-    popup <- paste0(
-      "<strong>", map_df$market, "</strong>",
-      "<br>County: ", map_df$county,
-      "<br>Average price: ", vapply(map_df$avg_price, format_number, character(1), digits = 2), " ", price_unit_label(),
-      "<br>Latest date: ", map_df$latest_date,
-      "<br>Records: ", map_df$records
+  output$price_map <- ggiraph::renderGirafe({
+    market_price_map(
+      map_df = map_data(),
+      counties = app_counties(),
+      price_unit = price_unit_label(),
+      currency = currency_label()
     )
-
-    leaflet(map_df) %>%
-      addProviderTiles(providers$CartoDB.Positron) %>%
-      addCircleMarkers(
-        lng = ~longitude,
-        lat = ~latitude,
-        radius = ~pmax(5, pmin(14, sqrt(records) + 3)),
-        color = ~pal(avg_price),
-        fillColor = ~pal(avg_price),
-        fillOpacity = 0.75,
-        weight = 1,
-        popup = popup
-      ) %>%
-      addLegend(
-        "bottomright",
-        pal = pal,
-        values = ~avg_price,
-        title = paste("Avg", currency_label()),
-        opacity = 0.8
-      )
   })
 
   output$map_market_table <- DT::renderDT({

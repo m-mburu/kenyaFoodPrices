@@ -21,7 +21,7 @@ check_and_install_packages <- function(packages) {
 }
 
 # List of packages to ensure are installed
-packages <- c("config", "data.table", "dplyr", "DT", "golem", "leaflet",
+packages <- c("config", "data.table", "dplyr", "DT", "ggiraph", "golem",
               "plotly", "ggplot2", "shiny", "lubridate", "remotes", "rmarkdown",
               "usethis", "devtools", "checkhelper", "sf", "rsconnect", "stringr",
               "shinycssloaders","waiter")

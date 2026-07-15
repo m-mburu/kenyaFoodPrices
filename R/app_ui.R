@@ -4,7 +4,7 @@
 #'     DO NOT REMOVE.
 #' @import shinycssloaders
 #' @importFrom DT DTOutput
-#' @importFrom leaflet leafletOutput
+#' @importFrom ggiraph girafeOutput
 #' @importFrom plotly plotlyOutput
 #' @importFrom shiny column div fluidPage fluidRow h4 navbarPage selectInput tabPanel tagList uiOutput
 #' @noRd
@@ -111,7 +111,7 @@ app_ui <- function(request) {
               8,
               plot_panel(
                 "Market Price Map",
-                withSpinner(leafletOutput("price_map", height = "620px"), color = "#00a2ab")
+                withSpinner(ggiraph::girafeOutput("price_map", height = "620px"), color = "#00a2ab")
               )
             ),
             column(

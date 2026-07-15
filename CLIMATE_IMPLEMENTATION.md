@@ -83,7 +83,7 @@ rather than reading or copying the full price dataset again.
 - Fixed condition bins and distinct, accessible palettes communicate dry/wet
   and stressed/green conditions. Missing values are grey.
 - Clicking either map focuses the county used by the detailed plots.
-- `leafletProxy()` updates polygon values without resetting pan or zoom.
+- `ggiraph` renders the county polygons as interactive SVG, with tooltips and single-county click selection shared across rainfall and vegetation maps.
 - Price analysis uses the active commodity filters and county-month medians to
   avoid markets with more records dominating the result.
 

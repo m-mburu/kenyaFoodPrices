@@ -13,6 +13,7 @@ $run_dev.*
 ^Meta$
 ^\.github$
 ^README\.Rmd$
+^README\.html$
 ^app\.R$
 ^rsconnect$
 ^\.git
