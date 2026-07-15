@@ -5,7 +5,8 @@
 
 <!-- badges: start -->
 
-[![R-CMD-check](https://github.com/m-mburu/kenyaFoodPrices/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/m-mburu/kenyaFoodPrices/actions/workflows/R-CMD-check.yaml)
+[![Monthly data
+refresh](https://github.com/m-mburu/kenyaFoodPrices/actions/workflows/dowload_data.yaml/badge.svg)](https://github.com/m-mburu/kenyaFoodPrices/actions/workflows/dowload_data.yaml)
 <!-- badges: end -->
 
 This package visualizes food prices and climate conditions in Kenya.
@@ -24,6 +25,16 @@ first, followed by county trends and exploratory lagged relationships
 with the selected commodity price. See
 [CLIMATE_IMPLEMENTATION.md](CLIMATE_IMPLEMENTATION.md) for the download,
 processing, data structure, visual design and limitations.
+
+## Latest climate conditions
+
+The maps below show each county’s latest rainfall and vegetation
+conditions relative to its historical pattern. Negative values indicate
+below-normal conditions, while positive values indicate above-normal
+conditions. Open the app’s Climate tab for physical values, county
+trends and commodity-price comparisons.
+
+<img src="man/figures/README-latest-climate-choropleth-1.png" alt="" width="100%" />
 
 ## Installation
 
@@ -62,9 +73,16 @@ ke_food_prices_maize[, .(mean_price = mean(price)), by = .(year_quarter_date)] %
 ``` r
 # Example usage of the function
 display_time_in_timezone("Africa/Nairobi")
-#> Last Run On (Your System Timezone): 2026-07-03 11:00:36 UTC
-#> Last Run On (Specified Timezone): 2026-07-03 14:00:36 Africa/Nairobi
+#> Last Run On (Your System Timezone): 2026-07-15 17:07:47 Africa/Nairobi
+#> Last Run On (Specified Timezone): 2026-07-15 17:07:47 Africa/Nairobi
 ```
 
-- **Thanks to WFP for providing the data on Humanitarian Data Exchange
-  (HDX)**
+## Acknowledgements
+
+- **World Food Programme (WFP)** for publishing Kenya food-price,
+  rainfall and vegetation indicators.
+- **World Bank Joint Food Security Monitor team** for harmonising the
+  climate indicators to current Kenyan administrative boundaries.
+- **World Health Organization (WHO)** for its nutrition and
+  public-health guidance, which helps frame the food-affordability
+  context of this work.

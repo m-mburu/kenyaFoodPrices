@@ -16,12 +16,92 @@ knitr::opts_chunk$set(
 # kenyaFoodPrices
 
 <!-- badges: start -->
-[![R-CMD-check](https://github.com/m-mburu/kenyaFoodPrices/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/m-mburu/kenyaFoodPrices/actions/workflows/R-CMD-check.yaml)
+[![Monthly data refresh](https://github.com/m-mburu/kenyaFoodPrices/actions/workflows/dowload_data.yaml/badge.svg)](https://github.com/m-mburu/kenyaFoodPrices/actions/workflows/dowload_data.yaml)
 <!-- badges: end -->
 
 This package visualizes food prices and climate conditions in Kenya. Food-price data is sourced from the World Food Programme (WFP) through the [Humanitarian Data Exchange](https://data.humdata.org/dataset/wfp-food-prices-for-kenya?). Rainfall and vegetation indicators originate from WFP and use the World Bank [Joint Food Security Monitor](https://microdata.worldbank.org/catalog/8115) harmonization to current Kenyan administrative boundaries. The app is hosted on shinyapps.io and can be accessed [here](https://mmburu.shinyapps.io/kenyaFoodPrices/).
 
 The Climate tab provides county rainfall and vegetation choropleths first, followed by county trends and exploratory lagged relationships with the selected commodity price. See [CLIMATE_IMPLEMENTATION.md](CLIMATE_IMPLEMENTATION.md) for the download, processing, data structure, visual design and limitations.
+
+## Latest climate conditions
+
+The maps below show each county's latest rainfall and vegetation conditions relative to its historical pattern. Negative values indicate below-normal conditions, while positive values indicate above-normal conditions. Open the app's Climate tab for physical values, county trends and commodity-price comparisons.
+
+```{r latest-climate-choropleth, echo=FALSE, fig.width=10, fig.height=5.8, warning=FALSE, message=FALSE}
+library(ggplot2)
+
+data(kenya_climate)
+data(kenya_counties)
+
+climate_monthly <- data.table::as.data.table(kenya_climate$county_monthly)
+climate_lookup <- data.table::as.data.table(kenya_climate$county_lookup)
+latest_climate_month <- max(climate_monthly$date, na.rm = TRUE)
+latest_climate <- climate_monthly[
+  date == latest_climate_month,
+  list(adm1_pcode, rainfall_z, ndvi_z)
+]
+latest_climate <- merge(
+  latest_climate,
+  climate_lookup[, list(adm1_pcode, county)],
+  by = "adm1_pcode",
+  all.x = TRUE
+)
+
+county_key <- function(x) {
+  gsub("[^a-z0-9]", "", tolower(x))
+}
+
+climate_shapes <- sf::st_as_sf(kenya_counties)
+climate_shapes$county_key <- county_key(climate_shapes$county)
+latest_climate$county_key <- county_key(latest_climate$county)
+climate_shapes <- merge(
+  climate_shapes,
+  latest_climate[, list(county_key, rainfall_z, ndvi_z)],
+  by = "county_key",
+  all.x = TRUE,
+  sort = FALSE
+)
+
+rainfall_map <- climate_shapes
+rainfall_map$indicator <- "Rainfall"
+rainfall_map$condition <- rainfall_map$rainfall_z
+
+vegetation_map <- climate_shapes
+vegetation_map$indicator <- "Vegetation (NDVI)"
+vegetation_map$condition <- vegetation_map$ndvi_z
+
+climate_map <- rbind(
+  rainfall_map[, c("indicator", "condition", "geometry")],
+  vegetation_map[, c("indicator", "condition", "geometry")]
+)
+
+ggplot(climate_map) +
+  geom_sf(aes(fill = condition), colour = "white", linewidth = 0.15) +
+  facet_wrap(~indicator, nrow = 1) +
+  scale_fill_gradient2(
+    low = "#B2182B",
+    mid = "#F7F7F7",
+    high = "#1B7837",
+    midpoint = 0,
+    name = "Standardised\ncondition"
+  ) +
+  labs(
+    title = paste(
+      "Kenya climate conditions —",
+      format(latest_climate_month, "%B %Y")
+    ),
+    subtitle = "Compared with each area's historical conditions",
+    caption = "Source: WFP climate indicators, harmonised by the World Bank Joint Food Security Monitor"
+  ) +
+  coord_sf(datum = NA) +
+  theme_void() +
+  theme(
+    plot.title = element_text(face = "bold"),
+    plot.subtitle = element_text(colour = "#555555"),
+    strip.text = element_text(face = "bold", size = 11),
+    legend.position = "bottom"
+  )
+```
 
 ## Installation
 
@@ -65,5 +145,9 @@ display_time_in_timezone("Africa/Nairobi")
 
 ```
 
-- **Thanks to WFP for providing the data on Humanitarian Data Exchange (HDX)**
+## Acknowledgements
+
+- **World Food Programme (WFP)** for publishing Kenya food-price, rainfall and vegetation indicators.
+- **World Bank Joint Food Security Monitor team** for harmonising the climate indicators to current Kenyan administrative boundaries.
+- **World Health Organization (WHO)** for its nutrition and public-health guidance, which helps frame the food-affordability context of this work.
 
