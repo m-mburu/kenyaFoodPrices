@@ -53,6 +53,8 @@ jobs:
         echo "RENV_CONFIG_EXTERNAL_LIBRARIES=$RUNNER_TEMP/workflow-library" >> "$GITHUB_ENV"
 
     - name: Install workflow-only packages
+      env:
+        GITHUB_PAT: ${{ github.token }}
       run: R_LIBS_SITE="$WORKFLOW_R_LIBRARY" R_LIBS_USER="$WORKFLOW_R_LIBRARY" Rscript --vanilla dev/install_workflow_packages.R
 
     - name: Refresh food-price data
