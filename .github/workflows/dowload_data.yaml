@@ -29,6 +29,16 @@ jobs:
       with:
         r-version: '4.5.0'
 
+    - name: Install sf system libraries
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install --yes --no-install-recommends \
+          libudunits2-dev \
+          libgdal-dev \
+          libgeos-dev \
+          libproj-dev \
+          libsqlite3-dev
+
     - name: Restore locked application packages
       uses: r-lib/actions/setup-renv@v2
       env:
