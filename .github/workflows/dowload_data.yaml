@@ -17,8 +17,6 @@ jobs:
     runs-on: ubuntu-24.04
     env:
       TZ: "Africa/Nairobi"
-      WORKFLOW_R_LIBRARY: ${{ runner.temp }}/workflow-library
-      RENV_CONFIG_EXTERNAL_LIBRARIES: ${{ runner.temp }}/workflow-library
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -47,6 +45,11 @@ jobs:
         GITHUB_PAT: ${{secrets.GH_PAT }}
       with:
         cache-version: 1
+
+    - name: Configure workflow-only R library
+      run: |
+        echo "WORKFLOW_R_LIBRARY=$RUNNER_TEMP/workflow-library" >> "$GITHUB_ENV"
+        echo "RENV_CONFIG_EXTERNAL_LIBRARIES=$RUNNER_TEMP/workflow-library" >> "$GITHUB_ENV"
 
     - name: Install workflow-only packages
       run: |
