@@ -27,15 +27,18 @@ climate_module_ui <- function(id) {
         shiny::column(4, shiny::uiOutput(ns("county_ui"))),
         shiny::column(
           4,
-          shiny::radioButtons(
-            ns("map_measure"),
-            "Map values",
-            choices = c(
-              "Compared with normal" = "condition",
-              "Actual levels" = "actual"
-            ),
-            selected = "condition",
-            inline = TRUE
+          shiny::div(
+            class = "kfp-toggle-control",
+            shiny::radioButtons(
+              ns("map_measure"),
+              "Map values",
+              choices = c(
+                "Compared with normal" = "condition",
+                "Actual levels" = "actual"
+              ),
+              selected = "condition",
+              inline = TRUE
+            )
           )
         )
       ),

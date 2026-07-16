@@ -6,7 +6,7 @@
 #' @importFrom DT DTOutput
 #' @importFrom ggiraph girafeOutput
 #' @importFrom plotly plotlyOutput
-#' @importFrom shiny column div fluidPage fluidRow h3 h4 navbarPage p selectInput tabPanel tagList uiOutput
+#' @importFrom shiny column div fluidPage fluidRow h3 h4 navbarPage p radioButtons selectInput tabPanel tagList uiOutput
 #' @noRd
 #'
 
@@ -104,20 +104,28 @@ app_ui <- function(request) {
             fluidRow(
               column(
                 3,
-                selectInput(
-                  "trend_frequency",
-                  "Trend frequency",
-                  choices = c("Monthly" = "month", "Quarterly" = "quarter"),
-                  selected = "month"
+                div(
+                  class = "kfp-toggle-control",
+                  radioButtons(
+                    "trend_frequency",
+                    "Trend frequency",
+                    choices = c("Monthly" = "month", "Quarterly" = "quarter"),
+                    selected = "month",
+                    inline = TRUE
+                  )
                 )
               ),
               column(
                 3,
-                selectInput(
-                  "trend_display",
-                  "Trend display",
-                  choices = c("Actual price" = "actual", "Smoothed average" = "smooth"),
-                  selected = "actual"
+                div(
+                  class = "kfp-toggle-control",
+                  radioButtons(
+                    "trend_display",
+                    "Trend display",
+                    choices = c("Actual price" = "actual", "Smoothed average" = "smooth"),
+                    selected = "actual",
+                    inline = TRUE
+                  )
                 )
               )
             )

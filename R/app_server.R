@@ -991,7 +991,7 @@ app_server <- function(input, output, session) {
     selected <- ranked[1:min(.N, 4)]$county
 
     div(
-      class = "kfp-compare-control",
+      class = "kfp-toggle-control kfp-compare-control",
       checkboxGroupInput(
         "compare_counties",
         "Counties to compare",
@@ -1017,7 +1017,7 @@ app_server <- function(input, output, session) {
     selected <- ranked[1:min(.N, 5)]$commodity
 
     div(
-      class = "kfp-compare-control",
+      class = "kfp-toggle-control kfp-compare-control",
       checkboxGroupInput(
         "compare_commodities",
         "Commodities to compare",

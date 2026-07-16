@@ -589,11 +589,11 @@ div.quarto-post h3 a {
   }
 }
 
-.kfp-compare-control {
+.kfp-toggle-control {
   margin: 6px 0 12px;
 }
 
-.kfp-compare-control .control-label {
+.kfp-toggle-control .control-label {
   display: block;
   margin-bottom: 8px;
   font-family: Lato, Helvetica, Arial, sans-serif;
@@ -602,19 +602,22 @@ div.quarto-post h3 a {
   color: #132f2f;
 }
 
-.kfp-compare-control .checkbox-inline {
+.kfp-toggle-control .checkbox-inline,
+.kfp-toggle-control .radio-inline {
   position: relative;
   margin: 0 8px 8px 0;
   padding: 0;
 }
 
-.kfp-compare-control .checkbox-inline input[type="checkbox"] {
+.kfp-toggle-control .checkbox-inline input[type="checkbox"],
+.kfp-toggle-control .radio-inline input[type="radio"] {
   position: absolute;
   opacity: 0;
   pointer-events: none;
 }
 
-.kfp-compare-control .checkbox-inline span {
+.kfp-toggle-control .checkbox-inline span,
+.kfp-toggle-control .radio-inline span {
   display: inline-flex;
   align-items: center;
   min-height: 32px;
@@ -627,24 +630,26 @@ div.quarto-post h3 a {
   line-height: 1.2;
 }
 
-.kfp-compare-control .checkbox-inline span::before {
+.kfp-toggle-control .checkbox-inline span::before {
   content: "+";
   margin-right: 7px;
   color: #00a2ab;
   font-weight: 700;
 }
 
-.kfp-compare-control .checkbox-inline input[type="checkbox"]:checked + span {
+.kfp-toggle-control .checkbox-inline input[type="checkbox"]:checked + span,
+.kfp-toggle-control .radio-inline input[type="radio"]:checked + span {
   color: #ffffff;
   background: #00a2ab;
   border-color: #00a2ab;
 }
 
-.kfp-compare-control .checkbox-inline input[type="checkbox"]:checked + span::before {
+.kfp-toggle-control .checkbox-inline input[type="checkbox"]:checked + span::before {
   content: "-";
   color: #ffffff;
 }
 
-.kfp-compare-control .checkbox-inline input[type="checkbox"]:focus + span {
+.kfp-toggle-control .checkbox-inline input[type="checkbox"]:focus + span,
+.kfp-toggle-control .radio-inline input[type="radio"]:focus + span {
   box-shadow: 0 0 0 3px rgba(0, 162, 171, 0.18);
 }
