@@ -8,7 +8,7 @@
 #' @importFrom DT datatable
 #' @importFrom ggiraph renderGirafe
 #' @importFrom plotly layout plot_ly renderPlotly
-#' @importFrom shiny dateRangeInput div h4 need reactive renderUI req selectInput selectizeInput validate
+#' @importFrom shiny checkboxGroupInput dateRangeInput div h4 need reactive renderUI req selectInput selectizeInput validate
 #' @importFrom stats reorder
 #' @noRd
 
@@ -380,7 +380,7 @@ app_server <- function(input, output, session) {
       ggplot2::aes(x = year_month_date, y = mean_price)
     ) +
       ggiraph::geom_line_interactive(
-        ggplot2::aes(tooltip = tooltip, data_id = month_id),
+        ggplot2::aes(tooltip = tooltip, data_id = month_id, group = 1),
         colour = "#00a2ab",
         linewidth = 1.2
       ) +
@@ -401,7 +401,7 @@ app_server <- function(input, output, session) {
         panel.grid.minor = ggplot2::element_blank()
       )
 
-    standard_girafe(gg, width_svg = 10, height_svg = 5.2)
+    standard_girafe(gg, width_svg = 14, height_svg = 4.4)
   })
 
   output$recent_change_table <- DT::renderDT({
@@ -616,7 +616,8 @@ app_server <- function(input, output, session) {
           ggplot2::aes(
             y = mean_price,
             tooltip = hover_text,
-            data_id = period_id
+            data_id = period_id,
+            group = 1
           ),
           colour = "#9bb5b5",
           linewidth = 0.8,
@@ -626,10 +627,21 @@ app_server <- function(input, output, session) {
           ggplot2::aes(
             y = display_price,
             tooltip = hover_text,
-            data_id = period_id
+            data_id = period_id,
+            group = 1
           ),
           colour = "#00a2ab",
           linewidth = 1.3,
+          na.rm = TRUE
+        ) +
+        ggiraph::geom_point_interactive(
+          ggplot2::aes(
+            y = display_price,
+            tooltip = hover_text,
+            data_id = period_id
+          ),
+          colour = "#00a2ab",
+          size = 2.2,
           na.rm = TRUE
         )
     } else {
@@ -638,7 +650,8 @@ app_server <- function(input, output, session) {
           ggplot2::aes(
             y = mean_price,
             tooltip = hover_text,
-            data_id = period_id
+            data_id = period_id,
+            group = 1
           ),
           colour = "#00a2ab",
           linewidth = 1.3,
@@ -648,7 +661,8 @@ app_server <- function(input, output, session) {
           ggplot2::aes(
             y = mean_price,
             tooltip = hover_text,
-            data_id = period_id
+            data_id = period_id,
+            group = 1
           ),
           colour = "#00a2ab",
           size = 2.2,
@@ -670,7 +684,7 @@ app_server <- function(input, output, session) {
         panel.grid.minor = ggplot2::element_blank()
       )
 
-    standard_girafe(gg, width_svg = 10, height_svg = 5.2)
+    standard_girafe(gg, width_svg = 14, height_svg = 4.4)
   })
 
   output$trend_change_table <- DT::renderDT({
@@ -703,44 +717,56 @@ app_server <- function(input, output, session) {
   output$main_price_histogram <- ggiraph::renderGirafe({
     price_val <- price_column()
     dt <- filtered_data()[is.finite(get(price_val))]
-    validate(need(nrow(dt) > 2, "There is not enough data for a price spread."))
+    validate(need(nrow(dt) > 2, "There is not enough data for an annual price trend."))
 
-    spread <- dt[
+    annual <- dt[
       ,
       .(
-        year = format(date, "%Y"),
-        price_value = get(price_val)
-      )
-    ]
-    spread[, year_id := year]
-    spread[, hover_text := paste0(
-      "Year: ", year,
-      "<br>Price: ", format_number(price_value, 2), " ", price_unit_label()
+        mean_price = mean(get(price_val), na.rm = TRUE),
+        min_price = min(get(price_val), na.rm = TRUE),
+        max_price = max(get(price_val), na.rm = TRUE),
+        observations = .N
+      ),
+      by = .(calendar_year = as.integer(format(date, "%Y")))
+    ][order(calendar_year)]
+    annual[, year_date := as.Date(sprintf("%s-01-01", calendar_year))]
+    annual[, year_id := as.character(calendar_year)]
+    annual[, hover_text := paste0(
+      "Year: ", calendar_year,
+      "<br>Average price: ", format_number(mean_price, 2), " ", price_unit_label(),
+      "<br>Range: ", format_number(min_price, 2), " - ", format_number(max_price, 2),
+      "<br>Records: ", format_number(observations)
     )]
 
-    gg <- ggplot2::ggplot(
-      spread,
-      ggplot2::aes(x = factor(year), y = price_value)
-    ) +
-      ggiraph::geom_boxplot_interactive(
+    gg <- ggplot2::ggplot(annual, ggplot2::aes(x = year_date, y = mean_price)) +
+      ggplot2::geom_linerange(
+        ggplot2::aes(ymin = min_price, ymax = max_price),
+        colour = "#b9dfe1",
+        linewidth = 1.1
+      ) +
+      ggiraph::geom_line_interactive(
+        ggplot2::aes(tooltip = hover_text, data_id = year_id, group = 1),
+        colour = "#00a2ab",
+        linewidth = 1.1
+      ) +
+      ggiraph::geom_point_interactive(
         ggplot2::aes(tooltip = hover_text, data_id = year_id),
-        fill = "#00a2ab",
-        colour = "#087f86",
-        alpha = 0.75,
-        outlier.colour = "#087f86"
+        colour = "#00a2ab",
+        size = 2
       ) +
       ggplot2::labs(
-        title = paste(input$commodity, input$pricetype, "price spread by year"),
+        title = paste(input$commodity, input$pricetype, "annual price range"),
         x = "Year",
-        y = paste("Price", price_unit_label())
+        y = paste("Average price", price_unit_label())
       ) +
+      ggplot2::scale_x_date(date_labels = "%Y", date_breaks = "2 years") +
       ggplot2::theme_minimal(base_size = 12) +
       ggplot2::theme(
         plot.title = ggplot2::element_text(face = "bold"),
         panel.grid.minor = ggplot2::element_blank()
       )
 
-    standard_girafe(gg, width_svg = 7.5, height_svg = 4.4)
+    standard_girafe(gg, width_svg = 11.5, height_svg = 4.1)
   })
 
   output$price_month_means <- ggiraph::renderGirafe({
@@ -796,7 +822,7 @@ app_server <- function(input, output, session) {
         alpha = 0.16
       ) +
       ggiraph::geom_line_interactive(
-        ggplot2::aes(tooltip = hover_text, data_id = month_id),
+        ggplot2::aes(tooltip = hover_text, data_id = month_id, group = 1),
         colour = "#00a2ab",
         linewidth = 1.3
       ) +
@@ -818,9 +844,34 @@ app_server <- function(input, output, session) {
         panel.grid.minor = ggplot2::element_blank()
       )
 
-    standard_girafe(gg, width_svg = 7.5, height_svg = 4.4)
+    standard_girafe(gg, width_svg = 11.5, height_svg = 4.1)
   })
 
+  output$geography_panel_ui <- renderUI({
+    price_val <- price_column()
+    dt <- filtered_data()[is.finite(get(price_val)) & !is.na(county) & !is.na(market)]
+
+    show_chart <- nrow(dt) > 0 && (
+      !identical(input$page1_market, "All") ||
+        (!identical(input$page1_county, "All") && data.table::uniqueN(dt$market) > 1) ||
+        (identical(input$page1_county, "All") && data.table::uniqueN(dt$county) > 1) ||
+        (identical(input$page1_county, "All") && data.table::uniqueN(dt$market) > 1)
+    )
+
+    if (isTRUE(show_chart)) {
+      plot_panel(
+        "Geographic comparison",
+        withSpinner(ggiraph::girafeOutput("geography_bar_plot", height = "280px"), color = "#00a2ab")
+      )
+    } else {
+      location <- if (nrow(dt) > 0) unique(dt$county)[1] else "No location"
+      div(
+        class = "kfp-panel kfp-compact-message",
+        h4("Geographic comparison"),
+        shiny::tags$p(paste("Only", location, "is available for this selection."))
+      )
+    }
+  })
   output$geography_bar_plot <- ggiraph::renderGirafe({
     price_val <- price_column()
     dt <- filtered_data()[is.finite(get(price_val)) & !is.na(county) & !is.na(market)]
@@ -891,7 +942,7 @@ app_server <- function(input, output, session) {
         panel.grid.minor = ggplot2::element_blank()
       )
 
-    standard_girafe(gg, width_svg = 10, height_svg = 5.1)
+    standard_girafe(gg, width_svg = 12, height_svg = 4)
   })
 
   map_data <- reactive({
@@ -933,16 +984,21 @@ app_server <- function(input, output, session) {
 
   output$compare_counties_ui <- renderUI({
     dt <- base_filtered_data()[!is.na(county)]
-    choices <- sort(unique(dt$county))
-    selected <- dt[, .N, by = county][order(-N)][1:min(.N, 4)]$county
+    validate(need(nrow(dt) > 0, "No counties are available for this selection."))
 
-    selectizeInput(
-      "compare_counties",
-      "Counties to compare",
-      choices = choices,
-      selected = selected,
-      multiple = TRUE,
-      options = list(maxItems = 6)
+    ranked <- dt[, .N, by = county][order(-N, county)]
+    choices <- ranked$county
+    selected <- ranked[1:min(.N, 4)]$county
+
+    div(
+      class = "kfp-compare-control",
+      checkboxGroupInput(
+        "compare_counties",
+        "Counties to compare",
+        choices = choices,
+        selected = selected,
+        inline = TRUE
+      )
     )
   })
 
@@ -954,16 +1010,21 @@ app_server <- function(input, output, session) {
         pricetype == input$pricetype &
         data.table::between(date, input$page1_date[1], input$page1_date[2])
     ]
-    choices <- sort(unique(dt$commodity))
-    selected <- dt[, .N, by = commodity][order(-N)][1:min(.N, 5)]$commodity
+    validate(need(nrow(dt) > 0, "No commodities are available for this selection."))
 
-    selectizeInput(
-      "compare_commodities",
-      "Commodities to compare",
-      choices = choices,
-      selected = selected,
-      multiple = TRUE,
-      options = list(maxItems = 6)
+    ranked <- dt[, .N, by = commodity][order(-N, commodity)]
+    choices <- ranked$commodity
+    selected <- ranked[1:min(.N, 5)]$commodity
+
+    div(
+      class = "kfp-compare-control",
+      checkboxGroupInput(
+        "compare_commodities",
+        "Commodities to compare",
+        choices = choices,
+        selected = selected,
+        inline = TRUE
+      )
     )
   })
 
@@ -982,15 +1043,25 @@ app_server <- function(input, output, session) {
       county, "<br>", format(year_month_date, "%b %Y"),
       "<br>Average price: ", format_number(mean_price, 2), " ", price_unit_label()
     )]
-    compare[, county_id := make.unique(as.character(county))]
+    compare[, county_id := as.character(county)]
+    compare[, county_point_id := paste(county, year_month_date, sep = "|")]
+    county_levels <- sort(unique(compare$county))
+    county_palette <- stats::setNames(
+      rep(c("#00a2ab", "#f2a541", "#647acb", "#23845f", "#c94a32", "#7a5fa3"), length.out = length(county_levels)),
+      county_levels
+    )
 
     gg <- ggplot2::ggplot(
       compare,
       ggplot2::aes(x = year_month_date, y = mean_price, colour = county, group = county)
     ) +
       ggiraph::geom_line_interactive(
-        ggplot2::aes(tooltip = tooltip, data_id = county_id),
+        ggplot2::aes(tooltip = tooltip, data_id = county_id, group = county),
         linewidth = 1
+      ) +
+      ggiraph::geom_point_interactive(
+        ggplot2::aes(tooltip = tooltip, data_id = county_point_id),
+        size = 1.8
       ) +
       ggplot2::labs(
         title = "County price comparison",
@@ -999,6 +1070,7 @@ app_server <- function(input, output, session) {
         colour = "County"
       ) +
       ggplot2::scale_x_date(date_labels = "%Y", date_breaks = "2 years") +
+      ggplot2::scale_colour_manual(values = county_palette) +
       ggplot2::theme_minimal(base_size = 12) +
       ggplot2::theme(
         plot.title = ggplot2::element_text(face = "bold"),
@@ -1006,7 +1078,7 @@ app_server <- function(input, output, session) {
         panel.grid.minor = ggplot2::element_blank()
       )
 
-    standard_girafe(gg, width_svg = 8, height_svg = 5)
+    standard_girafe(gg, width_svg = 12, height_svg = 4.2)
   })
 
   output$commodity_compare_plot <- ggiraph::renderGirafe({
@@ -1030,15 +1102,25 @@ app_server <- function(input, output, session) {
       commodity, "<br>", format(year_month_date, "%b %Y"),
       "<br>Average price: ", format_number(mean_price, 2), " ", price_unit_label()
     )]
-    compare[, commodity_id := make.unique(as.character(commodity))]
+    compare[, commodity_id := as.character(commodity)]
+    compare[, commodity_point_id := paste(commodity, year_month_date, sep = "|")]
+    commodity_levels <- sort(unique(compare$commodity))
+    commodity_palette <- stats::setNames(
+      rep(c("#00a2ab", "#f2a541", "#647acb", "#23845f", "#c94a32", "#7a5fa3"), length.out = length(commodity_levels)),
+      commodity_levels
+    )
 
     gg <- ggplot2::ggplot(
       compare,
       ggplot2::aes(x = year_month_date, y = mean_price, colour = commodity, group = commodity)
     ) +
       ggiraph::geom_line_interactive(
-        ggplot2::aes(tooltip = tooltip, data_id = commodity_id),
+        ggplot2::aes(tooltip = tooltip, data_id = commodity_id, group = commodity),
         linewidth = 1
+      ) +
+      ggiraph::geom_point_interactive(
+        ggplot2::aes(tooltip = tooltip, data_id = commodity_point_id),
+        size = 1.8
       ) +
       ggplot2::labs(
         title = "Commodity price comparison",
@@ -1047,6 +1129,7 @@ app_server <- function(input, output, session) {
         colour = "Commodity"
       ) +
       ggplot2::scale_x_date(date_labels = "%Y", date_breaks = "2 years") +
+      ggplot2::scale_colour_manual(values = commodity_palette) +
       ggplot2::theme_minimal(base_size = 12) +
       ggplot2::theme(
         plot.title = ggplot2::element_text(face = "bold"),
@@ -1054,7 +1137,7 @@ app_server <- function(input, output, session) {
         panel.grid.minor = ggplot2::element_blank()
       )
 
-    standard_girafe(gg, width_svg = 8, height_svg = 5)
+    standard_girafe(gg, width_svg = 12, height_svg = 4.2)
   })
 
   output$coverage_summary <- renderUI({
@@ -1113,7 +1196,7 @@ app_server <- function(input, output, session) {
         panel.grid.minor = ggplot2::element_blank()
       )
 
-    standard_girafe(gg, width_svg = 8, height_svg = 5)
+    standard_girafe(gg, width_svg = 12, height_svg = 4.2)
   })
 
   output$coverage_table <- DT::renderDT({
