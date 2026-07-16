@@ -60,7 +60,7 @@ app_ui <- function(request) {
               8,
               plot_panel(
                 "Price Trend",
-                withSpinner(ggiraph::girafeOutput("overview_trend", height = "390px"), color = "#00a2ab")
+                withSpinner(ggiraph::girafeOutput("overview_trend", height = "330px"), color = "#00a2ab")
               )
             ),
             column(
@@ -128,7 +128,7 @@ app_ui <- function(request) {
               8,
               plot_panel(
                 "Price trend",
-                withSpinner(ggiraph::girafeOutput("linePlot", height = "430px"), color = "#00a2ab")
+                withSpinner(ggiraph::girafeOutput("linePlot", height = "330px"), color = "#00a2ab")
               )
             ),
             column(
@@ -144,24 +144,21 @@ app_ui <- function(request) {
               6,
               plot_panel(
                 "Seasonality index",
-                withSpinner(ggiraph::girafeOutput("price_month_means", height = "360px"), color = "#00a2ab")
+                withSpinner(ggiraph::girafeOutput("price_month_means", height = "300px"), color = "#00a2ab")
               )
             ),
             column(
               6,
               plot_panel(
-                "Price spread by year",
-                withSpinner(ggiraph::girafeOutput("main_price_histogram", height = "360px"), color = "#00a2ab")
+                "Annual price range",
+                withSpinner(ggiraph::girafeOutput("main_price_histogram", height = "300px"), color = "#00a2ab")
               )
             )
           ),
           fluidRow(
             column(
               12,
-              plot_panel(
-                "Geographic comparison",
-                withSpinner(ggiraph::girafeOutput("geography_bar_plot", height = "440px"), color = "#00a2ab")
-              )
+              uiOutput("geography_panel_ui")
             )
           )
         )
@@ -200,12 +197,12 @@ app_ui <- function(request) {
         "Compare",
         fluidPage(
           fluidRow(
-            column(4, uiOutput("compare_counties_ui")),
-            column(4, uiOutput("compare_commodities_ui"))
+            column(6, uiOutput("compare_counties_ui")),
+            column(6, uiOutput("compare_commodities_ui"))
           ),
           fluidRow(
-            column(6, plot_panel("County Comparison", withSpinner(ggiraph::girafeOutput("county_compare_plot", height = "400px"), color = "#00a2ab"))),
-            column(6, plot_panel("Commodity Comparison", withSpinner(ggiraph::girafeOutput("commodity_compare_plot", height = "400px"), color = "#00a2ab")))
+            column(6, plot_panel("County Comparison", withSpinner(ggiraph::girafeOutput("county_compare_plot", height = "330px"), color = "#00a2ab"))),
+            column(6, plot_panel("Commodity Comparison", withSpinner(ggiraph::girafeOutput("commodity_compare_plot", height = "330px"), color = "#00a2ab")))
           )
         )
       ),
@@ -215,7 +212,7 @@ app_ui <- function(request) {
         fluidPage(
           uiOutput("coverage_summary"),
           fluidRow(
-            column(7, plot_panel("Observation Coverage by Year", withSpinner(ggiraph::girafeOutput("coverage_year_plot", height = "400px"), color = "#00a2ab"))),
+            column(7, plot_panel("Observation Coverage by Year", withSpinner(ggiraph::girafeOutput("coverage_year_plot", height = "330px"), color = "#00a2ab"))),
             column(5, plot_panel("Coverage Detail", withSpinner(DTOutput("coverage_table"), color = "#00a2ab")))
           )
         )
