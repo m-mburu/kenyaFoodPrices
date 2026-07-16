@@ -20,7 +20,7 @@ The workflow is:
 
 [CmdletBinding()]
 param(
-  [string]$TempRoot = "C:\tmp",
+  [string]$TempRoot = "",
   [string]$CheckDir = "",
   [string]$BuildDir = "",
   [string]$PandocDir = "C:\Program Files\Quarto\bin\tools",
@@ -39,16 +39,65 @@ function Write-Step {
   Write-Host "==> $Message" -ForegroundColor Cyan
 }
 
+function Resolve-Rscript {
+  $cmd = Get-Command Rscript -ErrorAction SilentlyContinue
+  if ($cmd) {
+    return $cmd.Source
+  }
+
+  $rRoots = @("C:\Program Files\R", "C:\Program Files (x86)\R")
+  foreach ($root in $rRoots) {
+    if (-not (Test-Path $root)) {
+      continue
+    }
+
+    $candidate = Get-ChildItem -Path $root -Directory -ErrorAction SilentlyContinue |
+      Sort-Object Name -Descending |
+      ForEach-Object {
+        Join-Path $_.FullName "bin\x64\Rscript.exe"
+        Join-Path $_.FullName "bin\Rscript.exe"
+      } |
+      Where-Object { Test-Path $_ } |
+      Select-Object -First 1
+
+    if ($candidate) {
+      return $candidate
+    }
+  }
+
+  throw "Rscript was not found. Install R or add Rscript.exe to PATH."
+}
+
 function Invoke-R {
   param(
     [Parameter(Mandatory = $true)]
     [string]$Expression
   )
 
-  & Rscript -e $Expression
+  & $script:RscriptPath --vanilla -e $Expression
   if ($LASTEXITCODE -ne 0) {
     throw "Rscript failed while running: $Expression"
   }
+}
+
+function Copy-CheckSource {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string]$SourceDir
+  )
+
+  $stageRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("kenyaFoodPrices-check-" + [System.Guid]::NewGuid().ToString("N"))
+  $stagePkg = Join-Path $stageRoot "kenyaFoodPrices"
+  New-Item -ItemType Directory -Force -Path $stagePkg | Out-Null
+
+  $excludeNames = @(".git", ".Rproj.user", "kenyaFoodPrices.Rcheck")
+  Get-ChildItem -LiteralPath $SourceDir -Force | Where-Object {
+    ($excludeNames -notcontains $_.Name) -and ($_.Name -notlike "*.tar.gz")
+  } | ForEach-Object {
+    Copy-Item -LiteralPath $_.FullName -Destination $stagePkg -Recurse -Force
+  }
+
+  return $stagePkg
 }
 
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -68,12 +117,13 @@ if (-not $BuildDir) {
 }
 
 Write-Step "Preparing Windows check environment"
-$env:TEMP = $TempRoot
-$env:TMP = $TempRoot
+$script:RscriptPath = Resolve-Rscript
+if ($TempRoot) {
+  New-Item -ItemType Directory -Force -Path $TempRoot | Out-Null
+  $env:TEMP = $TempRoot
+  $env:TMP = $TempRoot
+}
 Remove-Item Env:TMPDIR -ErrorAction SilentlyContinue
-
-
-New-Item -ItemType Directory -Force -Path $TempRoot | Out-Null
 
 foreach ($name in @("LC_COLLATE", "LC_CTYPE", "LC_MONETARY", "LC_TIME", "LC_ALL", "LANG")) {
   Remove-Item "Env:$name" -ErrorAction SilentlyContinue
@@ -95,10 +145,11 @@ $env:PATH = ($env:PATH -split ";" | Where-Object {
 }) -join ";"
 
 Write-Host "Repository : $repoRoot"
-Write-Host "TEMP/TMP   : $TempRoot"
+Write-Host "TEMP/TMP   : $env:TEMP"
 Write-Host "Check dir  : $CheckDir"
 Write-Host "Build dir  : $BuildDir"
 Write-Host "Pandoc dir : $($env:RSTUDIO_PANDOC)"
+Write-Host "Rscript    : $script:RscriptPath"
 
 Write-Step "Checking required R tooling"
 Invoke-R "required <- c('devtools', 'rmarkdown', 'roxygen2'); missing <- required[!vapply(required, requireNamespace, logical(1), quietly = TRUE)]; if (length(missing)) stop('Install missing R packages first: ', paste(missing, collapse = ', '), call. = FALSE); cat('R tooling OK\n')"
@@ -114,16 +165,34 @@ if (-not $SkipCheck) {
   if (Test-Path $checkOutputDir) {
     Remove-Item -LiteralPath $checkOutputDir -Recurse -Force
   }
+  $stagedPkg = Copy-CheckSource -SourceDir $repoRoot
+  Write-Host "Check src  : $stagedPkg"
   $checkDirR = $CheckDir.Replace("\", "/")
-  Invoke-R "devtools::check(check_dir = '$checkDirR')"
+  $stagedPkgR = $stagedPkg.Replace("\", "/")
+  try {
+    Invoke-R "devtools::check(pkg = '$stagedPkgR', check_dir = '$checkDirR')"
+  } finally {
+    if (Test-Path $stagedPkg) {
+      Remove-Item -LiteralPath (Split-Path -Parent $stagedPkg) -Recurse -Force
+    }
+  }
 }
 
 $builtPackage = $null
 if (-not $SkipBuild) {
   Write-Step "Building source package"
   New-Item -ItemType Directory -Force -Path $BuildDir | Out-Null
+  $stagedBuildPkg = Copy-CheckSource -SourceDir $repoRoot
+  Write-Host "Build src  : $stagedBuildPkg"
   $buildDirR = $BuildDir.Replace("\", "/")
-  Invoke-R "devtools::build(path = '$buildDirR')"
+  $stagedBuildPkgR = $stagedBuildPkg.Replace("\", "/")
+  try {
+    Invoke-R "devtools::build(pkg = '$stagedBuildPkgR', path = '$buildDirR')"
+  } finally {
+    if (Test-Path $stagedBuildPkg) {
+      Remove-Item -LiteralPath (Split-Path -Parent $stagedBuildPkg) -Recurse -Force
+    }
+  }
   $builtPackage = Get-ChildItem -Path $BuildDir -Filter "kenyaFoodPrices_*.tar.gz" |
     Sort-Object LastWriteTime -Descending |
     Select-Object -First 1 -ExpandProperty FullName

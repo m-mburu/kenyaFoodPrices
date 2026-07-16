@@ -6,7 +6,7 @@
 #' @importFrom DT DTOutput
 #' @importFrom ggiraph girafeOutput
 #' @importFrom plotly plotlyOutput
-#' @importFrom shiny column div fluidPage fluidRow h4 navbarPage selectInput tabPanel tagList uiOutput
+#' @importFrom shiny column div fluidPage fluidRow h3 h4 navbarPage p selectInput tabPanel tagList uiOutput
 #' @noRd
 #'
 
@@ -26,6 +26,11 @@ filter_panel <- function() {
     fluidRow(
       column(3, uiOutput("page1_county_ui")),
       column(3, uiOutput("page1_market_ui"))
+    ),
+    div(
+      class = "kfp-filter-footer",
+      uiOutput("filter_context"),
+      shiny::actionButton("reset_filters", "Reset filters", class = "kfp-reset-button")
     )
   )
 }
@@ -55,7 +60,7 @@ app_ui <- function(request) {
               8,
               plot_panel(
                 "Price Trend",
-                withSpinner(plotlyOutput("overview_trend", height = "390px"), color = "#00a2ab")
+                withSpinner(ggiraph::girafeOutput("overview_trend", height = "390px"), color = "#00a2ab")
               )
             ),
             column(
@@ -88,17 +93,76 @@ app_ui <- function(request) {
       tabPanel(
         "Trends",
         fluidPage(
+          div(
+            class = "kfp-trends-intro",
+            h3("Price trends"),
+            p("Understand the direction, seasonality, spread, and geographic differences in the selected data."),
+            uiOutput("trends_context")
+          ),
+          div(
+            class = "kfp-trends-controls",
+            fluidRow(
+              column(
+                3,
+                selectInput(
+                  "trend_frequency",
+                  "Trend frequency",
+                  choices = c("Monthly" = "month", "Quarterly" = "quarter"),
+                  selected = "month"
+                )
+              ),
+              column(
+                3,
+                selectInput(
+                  "trend_display",
+                  "Trend display",
+                  choices = c("Actual price" = "actual", "Smoothed average" = "smooth"),
+                  selected = "actual"
+                )
+              )
+            )
+          ),
+          uiOutput("trends_kpis"),
           fluidRow(
-            column(6, plot_panel("Quarterly Price Trend", withSpinner(plotlyOutput("linePlot"), color = "#00a2ab"))),
-            column(6, plot_panel("Price Distribution", withSpinner(plotlyOutput("main_price_histogram"), color = "#00a2ab")))
+            column(
+              8,
+              plot_panel(
+                "Price trend",
+                withSpinner(ggiraph::girafeOutput("linePlot", height = "430px"), color = "#00a2ab")
+              )
+            ),
+            column(
+              4,
+              plot_panel(
+                "Recent changes",
+                withSpinner(DTOutput("trend_change_table"), color = "#00a2ab")
+              )
+            )
           ),
           fluidRow(
-            column(6, plot_panel("Average Price by Quarter", withSpinner(plotlyOutput("price_quarter_means"), color = "#00a2ab"))),
-            column(6, plot_panel("Average Price by Month", withSpinner(plotlyOutput("price_month_means"), color = "#00a2ab")))
+            column(
+              6,
+              plot_panel(
+                "Seasonality index",
+                withSpinner(ggiraph::girafeOutput("price_month_means", height = "360px"), color = "#00a2ab")
+              )
+            ),
+            column(
+              6,
+              plot_panel(
+                "Price spread by year",
+                withSpinner(ggiraph::girafeOutput("main_price_histogram", height = "360px"), color = "#00a2ab")
+              )
+            )
           ),
           fluidRow(
-            column(6, plot_panel("Average Price by County", withSpinner(plotlyOutput("county_bar_plot"), color = "#00a2ab"))),
-            column(6, plot_panel("Average Price by Market", withSpinner(plotlyOutput("market_bar_plot"), color = "#00a2ab")))
+            column(
+              12,
+              plot_panel(
+                "Geographic comparison",
+                withSpinner(ggiraph::girafeOutput("geography_bar_plot", height = "440px"), color = "#00a2ab")
+              )
+            )
           )
         )
       ),
@@ -140,8 +204,8 @@ app_ui <- function(request) {
             column(4, uiOutput("compare_commodities_ui"))
           ),
           fluidRow(
-            column(6, plot_panel("County Comparison", withSpinner(plotlyOutput("county_compare_plot"), color = "#00a2ab"))),
-            column(6, plot_panel("Commodity Comparison", withSpinner(plotlyOutput("commodity_compare_plot"), color = "#00a2ab")))
+            column(6, plot_panel("County Comparison", withSpinner(ggiraph::girafeOutput("county_compare_plot", height = "400px"), color = "#00a2ab"))),
+            column(6, plot_panel("Commodity Comparison", withSpinner(ggiraph::girafeOutput("commodity_compare_plot", height = "400px"), color = "#00a2ab")))
           )
         )
       ),
@@ -151,7 +215,7 @@ app_ui <- function(request) {
         fluidPage(
           uiOutput("coverage_summary"),
           fluidRow(
-            column(7, plot_panel("Observation Coverage by Year", withSpinner(plotlyOutput("coverage_year_plot"), color = "#00a2ab"))),
+            column(7, plot_panel("Observation Coverage by Year", withSpinner(ggiraph::girafeOutput("coverage_year_plot", height = "400px"), color = "#00a2ab"))),
             column(5, plot_panel("Coverage Detail", withSpinner(DTOutput("coverage_table"), color = "#00a2ab")))
           )
         )
