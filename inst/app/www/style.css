@@ -403,6 +403,47 @@ div.quarto-post h3 a {
   border-radius: 4px;
 }
 
+/* Bounded chart frames prevent a short table or no-data state from leaving a
+   large blank block, while still giving visualizations room on wide screens. */
+.kfp-viz-frame {
+  width: 100%;
+  height: clamp(270px, 24vw, 340px);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.kfp-viz-compact {
+  height: clamp(240px, 22vw, 300px);
+}
+
+.kfp-viz-map {
+  height: clamp(360px, 38vw, 500px);
+}
+
+.kfp-viz-climate-map {
+  height: clamp(340px, 34vw, 460px);
+}
+
+.kfp-viz-wide {
+  height: clamp(300px, 32vw, 410px);
+}
+
+.kfp-viz-frame .shiny-bound-output,
+.kfp-viz-frame .html-widget,
+.kfp-viz-frame .girafe,
+.kfp-viz-frame .girafe_container_std {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+.kfp-viz-frame .shiny-output-error {
+  height: auto !important;
+  min-height: 44px !important;
+  padding: 10px 0;
+  overflow: visible;
+}
+
 @media (max-width: 1200px) {
   .kfp-kpi-grid {
     grid-template-columns: repeat(3, minmax(150px, 1fr));
@@ -593,7 +634,6 @@ div.quarto-post h3 a {
 
 .kfp-panel .girafe {
   width: 100% !important;
-  min-height: 260px;
 }
 
 .kfp-panel .girafe_container_std svg {
@@ -677,7 +717,10 @@ div.quarto-post h3 a {
 
 @media (max-width: 768px) {
   .kfp-filter-band details > summary { min-height: 44px; padding: 10px 0; }
-  .kfp-panel .girafe { min-height: 220px; }
+  .kfp-viz-frame { height: clamp(230px, 72vw, 300px); }
+  .kfp-viz-map,
+  .kfp-viz-climate-map { height: clamp(300px, 105vw, 420px); }
+  .kfp-viz-wide { height: clamp(270px, 88vw, 360px); }
 }
 
 .kfp-toggle-control .checkbox-inline span::before {

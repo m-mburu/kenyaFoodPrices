@@ -54,7 +54,10 @@ climate_module_ui <- function(id) {
         plot_panel(
           "Rainfall conditions",
           shinycssloaders::withSpinner(
-            ggiraph::girafeOutput(ns("rainfall_map"), height = "520px"),
+            visualization_frame(
+              ggiraph::girafeOutput(ns("rainfall_map"), height = "100%"),
+              "climate-map"
+            ),
             color = "#00a2ab"
           )
         )
@@ -64,7 +67,10 @@ climate_module_ui <- function(id) {
         plot_panel(
           "Vegetation greenness",
           shinycssloaders::withSpinner(
-            ggiraph::girafeOutput(ns("vegetation_map"), height = "520px"),
+            visualization_frame(
+              ggiraph::girafeOutput(ns("vegetation_map"), height = "100%"),
+              "climate-map"
+            ),
             color = "#00a2ab"
           )
         )
@@ -80,7 +86,10 @@ climate_module_ui <- function(id) {
             plot_panel(
               "Climate conditions and commodity price movement",
               shinycssloaders::withSpinner(
-                plotly::plotlyOutput(ns("climate_price_trend"), height = "430px"),
+                visualization_frame(
+                  plotly::plotlyOutput(ns("climate_price_trend"), height = "100%"),
+                  "wide"
+                ),
                 color = "#00a2ab"
               )
             )
@@ -95,7 +104,10 @@ climate_module_ui <- function(id) {
             plot_panel(
               "Climate conditions versus later price changes",
               shinycssloaders::withSpinner(
-                plotly::plotlyOutput(ns("lag_correlation_plot"), height = "410px"),
+                visualization_frame(
+                  plotly::plotlyOutput(ns("lag_correlation_plot"), height = "100%"),
+                  "wide"
+                ),
                 color = "#00a2ab"
               )
             )

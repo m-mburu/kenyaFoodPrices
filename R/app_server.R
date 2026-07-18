@@ -429,7 +429,7 @@ app_server <- function(input, output, session) {
       )
     ]
 
-    datatable_compact(display, page_length = 12)
+    datatable_compact(display, page_length = 6)
   })
 
   output$top_county_table <- DT::renderDT({
@@ -736,7 +736,7 @@ app_server <- function(input, output, session) {
       c("Average price", "% change")
     )
 
-    datatable_compact(display, page_length = 12)
+    datatable_compact(display, page_length = 6)
   })
 
   output$main_price_histogram <- ggiraph::renderGirafe({
@@ -891,7 +891,13 @@ app_server <- function(input, output, session) {
     if (isTRUE(show_chart)) {
       plot_panel(
         "Geographic comparison",
-        withSpinner(ggiraph::girafeOutput("geography_bar_plot", height = "280px"), color = "#00a2ab")
+        withSpinner(
+          visualization_frame(
+            ggiraph::girafeOutput("geography_bar_plot", height = "100%"),
+            "compact"
+          ),
+          color = "#00a2ab"
+        )
       )
     } else {
       location <- if (nrow(dt) > 0) unique(dt$county)[1] else "No location"
@@ -1008,7 +1014,7 @@ app_server <- function(input, output, session) {
     display[, `Average Price` := vapply(`Average Price`, format_number, character(1), digits = 2)]
     display[, `Latest Date` := as.character(`Latest Date`)]
     display <- display[, .(Market, County, `Average Price`, `Latest Date`, Records)]
-    datatable_compact(display, page_length = 10)
+    datatable_compact(display, page_length = 6)
   })
 
   output$compare_counties_ui <- renderUI({
@@ -1246,6 +1252,6 @@ app_server <- function(input, output, session) {
 
     display[, `First Date` := as.character(`First Date`)]
     display[, `Latest Date` := as.character(`Latest Date`)]
-    datatable_compact(display, page_length = 10)
+    datatable_compact(display, page_length = 6)
   })
 }

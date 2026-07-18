@@ -73,6 +73,13 @@ plot_panel <- function(title, output) {
   )
 }
 
+visualization_frame <- function(output, size = "standard") {
+  div(
+    class = paste("kfp-viz-frame", paste0("kfp-viz-", size)),
+    output
+  )
+}
+
 app_ui <- function(request) {
   tagList(
     golem_add_external_resources(),
@@ -103,7 +110,9 @@ app_ui <- function(request) {
                 plot_panel(
                   "Price Trend",
                   shinycssloaders::withSpinner(
-                    ggiraph::girafeOutput("overview_trend", height = "330px"),
+                    visualization_frame(
+                      ggiraph::girafeOutput("overview_trend", height = "100%")
+                    ),
                     color = "#00a2ab"
                   )
                 )
@@ -196,7 +205,9 @@ app_ui <- function(request) {
                 plot_panel(
                   "Price trend",
                   shinycssloaders::withSpinner(
-                    ggiraph::girafeOutput("linePlot", height = "330px"),
+                    visualization_frame(
+                      ggiraph::girafeOutput("linePlot", height = "100%")
+                    ),
                     color = "#00a2ab"
                   )
                 )
@@ -218,7 +229,10 @@ app_ui <- function(request) {
                 plot_panel(
                   "Seasonality index",
                   shinycssloaders::withSpinner(
-                    ggiraph::girafeOutput("price_month_means", height = "300px"),
+                    visualization_frame(
+                      ggiraph::girafeOutput("price_month_means", height = "100%"),
+                      "compact"
+                    ),
                     color = "#00a2ab"
                   )
                 )
@@ -228,9 +242,12 @@ app_ui <- function(request) {
                 plot_panel(
                   "Annual price range",
                   shinycssloaders::withSpinner(
-                    ggiraph::girafeOutput(
-                      "main_price_histogram",
-                      height = "300px"
+                    visualization_frame(
+                      ggiraph::girafeOutput(
+                        "main_price_histogram",
+                        height = "100%"
+                      ),
+                      "compact"
                     ),
                     color = "#00a2ab"
                   )
@@ -254,7 +271,10 @@ app_ui <- function(request) {
                 plot_panel(
                   "Market Price Map",
                   shinycssloaders::withSpinner(
-                    ggiraph::girafeOutput("price_map", height = "620px"),
+                    visualization_frame(
+                      ggiraph::girafeOutput("price_map", height = "100%"),
+                      "map"
+                    ),
                     color = "#00a2ab"
                   )
                 )
@@ -291,9 +311,11 @@ app_ui <- function(request) {
                 plot_panel(
                   "County Comparison",
                   shinycssloaders::withSpinner(
-                    ggiraph::girafeOutput(
-                      "county_compare_plot",
-                      height = "330px"
+                    visualization_frame(
+                      ggiraph::girafeOutput(
+                        "county_compare_plot",
+                        height = "100%"
+                      )
                     ),
                     color = "#00a2ab"
                   )
@@ -304,9 +326,11 @@ app_ui <- function(request) {
                 plot_panel(
                   "Commodity Comparison",
                   shinycssloaders::withSpinner(
-                    ggiraph::girafeOutput(
-                      "commodity_compare_plot",
-                      height = "330px"
+                    visualization_frame(
+                      ggiraph::girafeOutput(
+                        "commodity_compare_plot",
+                        height = "100%"
+                      )
                     ),
                     color = "#00a2ab"
                   )
@@ -325,9 +349,11 @@ app_ui <- function(request) {
                 plot_panel(
                   "Observation Coverage by Year",
                   shinycssloaders::withSpinner(
-                    ggiraph::girafeOutput(
-                      "coverage_year_plot",
-                      height = "330px"
+                    visualization_frame(
+                      ggiraph::girafeOutput(
+                        "coverage_year_plot",
+                        height = "100%"
+                      )
                     ),
                     color = "#00a2ab"
                   )
