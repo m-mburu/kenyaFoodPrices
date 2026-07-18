@@ -89,6 +89,37 @@ a:focus {
   outline-offset: 2px;
 }
 
+.kfp-skip-link {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 1000;
+  padding: 10px 14px;
+  color: #ffffff;
+  background: #132f2f;
+  transform: translateY(-150%);
+}
+
+.kfp-skip-link:focus {
+  transform: translateY(0);
+  color: #ffffff;
+}
+
+.kfp-filter-scope {
+  font-weight: 700;
+  font-size: 12px;
+  color: #132f2f;
+}
+
+.kfp-filter-chip {
+  display: inline-block;
+  margin: 2px 4px 2px 0;
+  padding: 3px 8px;
+  border: 1px solid rgba(17, 17, 17, .22);
+  border-radius: 999px;
+  background: #ffffff;
+}
+
 /* Welcome message block */
 .kfp-welcome {
   margin: 10px 0 15px;
@@ -335,6 +366,20 @@ div.quarto-post h3 a {
   font-size: 13px;
 }
 
+.kfp-panel .dataTables_length {
+  margin-bottom: 8px;
+  color: #536868;
+}
+
+.kfp-panel .dataTables_length select {
+  min-width: 64px;
+  min-height: 34px;
+  margin: 0 4px;
+  border: 1px solid rgba(17, 17, 17, 0.22);
+  border-radius: 4px;
+  background: #ffffff;
+}
+
 .kfp-panel table.dataTable thead th {
   font-family: Lato, Helvetica, Arial, sans-serif;
   font-size: 12px;
@@ -370,6 +415,47 @@ div.quarto-post h3 a {
 .kfp-panel .girafe_container_std {
   display: block;
   border-radius: 4px;
+}
+
+/* Bounded chart frames prevent a short table or no-data state from leaving a
+   large blank block, while still giving visualizations room on wide screens. */
+.kfp-viz-frame {
+  width: 100%;
+  height: clamp(270px, 24vw, 340px);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.kfp-viz-compact {
+  height: clamp(240px, 22vw, 300px);
+}
+
+.kfp-viz-map {
+  height: clamp(360px, 38vw, 500px);
+}
+
+.kfp-viz-climate-map {
+  height: clamp(340px, 34vw, 460px);
+}
+
+.kfp-viz-wide {
+  height: clamp(300px, 32vw, 410px);
+}
+
+.kfp-viz-frame .shiny-bound-output,
+.kfp-viz-frame .html-widget,
+.kfp-viz-frame .girafe,
+.kfp-viz-frame .girafe_container_std {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 0 !important;
+}
+
+.kfp-viz-frame .shiny-output-error {
+  height: auto !important;
+  min-height: 44px !important;
+  padding: 10px 0;
+  overflow: visible;
 }
 
 @media (max-width: 1200px) {
@@ -496,7 +582,8 @@ div.quarto-post h3 a {
 }
 
 .kfp-reset-button {
-  padding: 5px 11px;
+  min-height: 44px;
+  padding: 9px 14px;
   color: #345151;
   background: #ffffff;
   border: 1px solid rgba(17, 17, 17, 0.22);
@@ -561,7 +648,6 @@ div.quarto-post h3 a {
 
 .kfp-panel .girafe {
   width: 100% !important;
-  min-height: 260px;
 }
 
 .kfp-panel .girafe_container_std svg {
@@ -589,11 +675,11 @@ div.quarto-post h3 a {
   }
 }
 
-.kfp-compare-control {
+.kfp-toggle-control {
   margin: 6px 0 12px;
 }
 
-.kfp-compare-control .control-label {
+.kfp-toggle-control .control-label {
   display: block;
   margin-bottom: 8px;
   font-family: Lato, Helvetica, Arial, sans-serif;
@@ -602,22 +688,25 @@ div.quarto-post h3 a {
   color: #132f2f;
 }
 
-.kfp-compare-control .checkbox-inline {
+.kfp-toggle-control .checkbox-inline,
+.kfp-toggle-control .radio-inline {
   position: relative;
   margin: 0 8px 8px 0;
   padding: 0;
 }
 
-.kfp-compare-control .checkbox-inline input[type="checkbox"] {
+.kfp-toggle-control .checkbox-inline input[type="checkbox"],
+.kfp-toggle-control .radio-inline input[type="radio"] {
   position: absolute;
   opacity: 0;
   pointer-events: none;
 }
 
-.kfp-compare-control .checkbox-inline span {
+.kfp-toggle-control .checkbox-inline span,
+.kfp-toggle-control .radio-inline span {
   display: inline-flex;
   align-items: center;
-  min-height: 32px;
+  min-height: 44px;
   padding: 6px 12px;
   color: #345151;
   background: #ffffff;
@@ -627,24 +716,47 @@ div.quarto-post h3 a {
   line-height: 1.2;
 }
 
-.kfp-compare-control .checkbox-inline span::before {
+.kfp-calculation-control {
+  margin: 8px 0 4px;
+}
+
+.kfp-calculation-control .radio-inline {
+  min-height: 44px;
+  padding-top: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
+
+@media (max-width: 768px) {
+  .kfp-filter-band details > summary { min-height: 44px; padding: 10px 0; }
+  .kfp-viz-frame { height: clamp(230px, 72vw, 300px); }
+  .kfp-viz-map,
+  .kfp-viz-climate-map { height: clamp(300px, 105vw, 420px); }
+  .kfp-viz-wide { height: clamp(270px, 88vw, 360px); }
+}
+
+.kfp-toggle-control .checkbox-inline span::before {
   content: "+";
   margin-right: 7px;
   color: #00a2ab;
   font-weight: 700;
 }
 
-.kfp-compare-control .checkbox-inline input[type="checkbox"]:checked + span {
+.kfp-toggle-control .checkbox-inline input[type="checkbox"]:checked + span,
+.kfp-toggle-control .radio-inline input[type="radio"]:checked + span {
   color: #ffffff;
   background: #00a2ab;
   border-color: #00a2ab;
 }
 
-.kfp-compare-control .checkbox-inline input[type="checkbox"]:checked + span::before {
+.kfp-toggle-control .checkbox-inline input[type="checkbox"]:checked + span::before {
   content: "-";
   color: #ffffff;
 }
 
-.kfp-compare-control .checkbox-inline input[type="checkbox"]:focus + span {
+.kfp-toggle-control .checkbox-inline input[type="checkbox"]:focus + span,
+.kfp-toggle-control .radio-inline input[type="radio"]:focus + span {
   box-shadow: 0 0 0 3px rgba(0, 162, 171, 0.18);
 }

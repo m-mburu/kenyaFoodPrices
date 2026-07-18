@@ -2,6 +2,9 @@
 ^renv\.lock$
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^\.Rprofile$
+^\.Rhistory$
+^\.gitignore$
 ^data-raw$
 dev_history.R
 ^dev$
@@ -16,8 +19,10 @@ $run_dev.*
 ^README\.html$
 ^app\.R$
 ^rsconnect$
-^\.git
-^\.codex
-^\.agents
+^\.git$
+^\.codex$
+^\.agents$
 ^R/_disable_autoload\.R$
 ^CLIMATE_IMPLEMENTATION\.md$
+^kenyaFoodPrices_[0-9.]+\.tar\.gz$
+^kenyaFoodPrices\.Rcheck$
