@@ -78,12 +78,18 @@ kpi_card <- function(label, value, note = NULL, status = "") {
 }
 
 datatable_compact <- function(data, page_length = 8) {
+  page_options <- sort(unique(c(as.integer(page_length), 10L, 25L)))
+
   DT::datatable(
     data,
     rownames = FALSE,
     options = list(
       pageLength = page_length,
-      dom = "tip",
+      lengthMenu = list(
+        c(page_options, -1L),
+        c(as.character(page_options), "All")
+      ),
+      dom = "ltip",
       autoWidth = TRUE,
       scrollX = TRUE
     )

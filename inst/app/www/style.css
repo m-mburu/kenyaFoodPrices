@@ -366,6 +366,20 @@ div.quarto-post h3 a {
   font-size: 13px;
 }
 
+.kfp-panel .dataTables_length {
+  margin-bottom: 8px;
+  color: #536868;
+}
+
+.kfp-panel .dataTables_length select {
+  min-width: 64px;
+  min-height: 34px;
+  margin: 0 4px;
+  border: 1px solid rgba(17, 17, 17, 0.22);
+  border-radius: 4px;
+  background: #ffffff;
+}
+
 .kfp-panel table.dataTable thead th {
   font-family: Lato, Helvetica, Arial, sans-serif;
   font-size: 12px;
