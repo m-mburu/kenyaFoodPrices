@@ -20,6 +20,18 @@ current Kenyan administrative boundaries. The app is hosted on
 shinyapps.io and can be accessed
 [here](https://mmburu.shinyapps.io/kenyaFoodPrices/).
 
+## Price estimates and coverage
+
+The dashboard defaults to a balanced median: it takes each market’s
+monthly median, then each county’s monthly median, then the national
+monthly median. This prevents locations with more raw records from
+receiving extra weight. Users can choose a clearly labelled
+record-weighted mean when that is the appropriate question. Every price
+panel reports its calculation and coverage. Month-on-month changes are
+shown only when the immediately preceding calendar month has an
+observation; gaps are reported as not available rather than silently
+treated as one-month changes.
+
 The Climate tab provides county rainfall and vegetation choropleths
 first, followed by county trends and exploratory lagged relationships
 with the selected commodity price. See
@@ -73,8 +85,8 @@ ke_food_prices_maize[, .(mean_price = mean(price)), by = .(year_quarter_date)] %
 ``` r
 # Example usage of the function
 display_time_in_timezone("Africa/Nairobi")
-#> Last Run On (Your System Timezone): 2026-07-16 09:24:28 UTC
-#> Last Run On (Specified Timezone): 2026-07-16 12:24:28 Africa/Nairobi
+#> Last Run On (Your System Timezone): 2026-07-18 14:46:27 UTC
+#> Last Run On (Specified Timezone): 2026-07-18 17:46:27 Africa/Nairobi
 ```
 
 ## Acknowledgements
