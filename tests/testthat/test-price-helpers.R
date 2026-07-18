@@ -51,3 +51,15 @@ test_that("zero and non-finite prior values never produce a percentage change", 
   result <- complete_monthly_changes(monthly)
   expect_true(is.na(result[2, percent_change]))
 })
+
+test_that("coverage labels support chart vectors", {
+  labels <- price_coverage_label(
+    records = c(10, 20),
+    markets = c(2, 3),
+    counties = c(1, 2)
+  )
+
+  expect_length(labels, 2L)
+  expect_match(labels[[1L]], "10 records")
+  expect_match(labels[[2L]], "3 markets")
+})

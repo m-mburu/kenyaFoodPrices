@@ -299,6 +299,7 @@ climate_module_server <- function(
     })
 
     climate_series <- shiny::reactive({
+      shiny::req(input$county)
       if (identical(input$county, "All")) {
         climate_monthly[
           ,

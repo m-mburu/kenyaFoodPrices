@@ -111,9 +111,17 @@ complete_monthly_changes <- function(data, date_column = "year_month_date", valu
 }
 
 price_coverage_label <- function(records, markets = NA_integer_, counties = NA_integer_, covered_months = NA_integer_) {
-  parts <- paste(format_number(records), "records")
-  if (is.finite(markets)) parts <- c(parts, paste(format_number(markets), "markets"))
-  if (is.finite(counties)) parts <- c(parts, paste(format_number(counties), "counties"))
-  if (is.finite(covered_months)) parts <- c(parts, paste(format_number(covered_months), "months"))
-  paste(parts, collapse = " | ")
+  size <- max(length(records), length(markets), length(counties), length(covered_months))
+  records <- rep_len(records, size)
+  markets <- rep_len(markets, size)
+  counties <- rep_len(counties, size)
+  covered_months <- rep_len(covered_months, size)
+
+  vapply(seq_len(size), function(index) {
+    parts <- paste(format_number(records[index]), "records")
+    if (is.finite(markets[index])) parts <- c(parts, paste(format_number(markets[index]), "markets"))
+    if (is.finite(counties[index])) parts <- c(parts, paste(format_number(counties[index]), "counties"))
+    if (is.finite(covered_months[index])) parts <- c(parts, paste(format_number(covered_months[index]), "months"))
+    paste(parts, collapse = " | ")
+  }, character(1))
 }
