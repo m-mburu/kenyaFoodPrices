@@ -10,7 +10,12 @@
 #' @importFrom plotly layout plot_ly renderPlotly
 #' @importFrom shiny checkboxGroupInput dateRangeInput div h4 need reactive renderUI req selectInput selectizeInput validate
 #' @importFrom stats reorder
+#' @keywords internal
 #' @noRd
+utils::globalVariables(c(
+  "Average Price", ":=", "consecutive_month", "estimate",
+  "percent_change", "previous_estimate"
+))
 
 format_number <- function(x, digits = 0) {
   if (length(x) == 0) {
@@ -108,6 +113,10 @@ app_server <- function(input, output, session) {
   price_unit_label <- reactive({
     unit <- tolower(gsub("\\s+", " ", input$unit %||% "unit"))
     paste(currency_label(), "per", unit)
+  })
+
+  calculation_label <- reactive({
+    price_calculation_label(input$calculation %||% "balanced_median")
   })
 
   output$category_ui <- renderUI({
@@ -267,65 +276,64 @@ app_server <- function(input, output, session) {
 
     shiny::tags$div(
       class = "kfp-filter-context",
-      paste(
-        input$commodity,
-        "|",
-        input$pricetype,
-        "|",
-        input$unit,
-        "|",
-        county_label,
-        "|",
-        market_label,
-        "|",
-        date_label
-      )
+      shiny::tags$span(class = "kfp-filter-chip", input$commodity),
+      shiny::tags$span(class = "kfp-filter-chip", input$pricetype),
+      shiny::tags$span(class = "kfp-filter-chip", input$unit),
+      shiny::tags$span(class = "kfp-filter-chip", county_label),
+      shiny::tags$span(class = "kfp-filter-chip", market_label),
+      shiny::tags$span(class = "kfp-filter-chip", date_label),
+      shiny::tags$span(class = "kfp-filter-chip", calculation_label())
     )
   })
 
-  observeEvent(input$reset_filters, {
-    first_category <- sort(unique(food_prices$category))[1]
-    updateSelectInput(session, "category", selected = first_category)
-    updateSelectInput(session, "Currency", selected = "price")
+  observeEvent(input$reset_filters,
+    {
+      first_category <- sort(unique(food_prices$category))[1]
+      updateSelectInput(session, "category", selected = first_category)
+      updateSelectInput(session, "Currency", selected = "price")
 
-    if (!is.null(input$page1_date)) {
-      shiny::updateDateRangeInput(
-        session,
-        "page1_date",
-        start = min(food_prices$date, na.rm = TRUE),
-        end = max(food_prices$date, na.rm = TRUE)
-      )
-    }
-    if (!is.null(input$page1_county)) {
-      updateSelectInput(session, "page1_county", selected = "All")
-    }
-    if (!is.null(input$page1_market)) {
-      updateSelectInput(session, "page1_market", selected = "All")
-    }
-  }, ignoreInit = TRUE)
+      if (!is.null(input$page1_date)) {
+        shiny::updateDateRangeInput(
+          session,
+          "page1_date",
+          start = min(food_prices$date, na.rm = TRUE),
+          end = max(food_prices$date, na.rm = TRUE)
+        )
+      }
+      if (!is.null(input$page1_county)) {
+        updateSelectInput(session, "page1_county", selected = "All")
+      }
+      if (!is.null(input$page1_market)) {
+        updateSelectInput(session, "page1_market", selected = "All")
+      }
+      shiny::updateRadioButtons(session, "calculation", selected = "balanced_median")
+    },
+    ignoreInit = TRUE
+  )
 
   climate_module_server(
     "climate",
     price_data = base_filtered_data,
     price_column = price_column,
-    price_unit_label = price_unit_label
+    price_unit_label = price_unit_label,
+    global_county = reactive(input$page1_county %||% "All"),
+    set_global_county = function(county) {
+      updateSelectInput(session, "page1_county", selected = county)
+    }
   )
 
-  monthly_summary <- reactive({
+  price_aggregation <- reactive({
     dt <- filtered_data()
     req(nrow(dt) > 0)
-    price_val <- price_column()
+    aggregate_price_data(dt, price_column(), input$calculation %||% "balanced_median")
+  })
 
-    dt[
-      ,
-      .(
-        mean_price = mean(get(price_val), na.rm = TRUE),
-        observations = .N,
-        counties = uniqueN(county, na.rm = TRUE),
-        markets = uniqueN(market, na.rm = TRUE)
-      ),
-      by = .(year_month_date)
-    ][order(year_month_date)]
+  monthly_summary <- reactive({
+    monthly <- data.table::copy(price_aggregation()$national_month)
+    req(nrow(monthly) > 0)
+    data.table::setnames(monthly, "estimate", "mean_price")
+    data.table::setnames(monthly, "records", "observations")
+    complete_monthly_changes(monthly, value_column = "mean_price")
   })
 
   output$summary_kpis <- renderUI({
@@ -354,12 +362,12 @@ app_server <- function(input, output, session) {
 
     div(
       class = "kfp-kpi-grid",
-      kpi_card("Latest month", format(latest_month, "%b %Y"), paste(format_number(latest_row$observations), "records")),
-      kpi_card("Average price", format_number(current_price, 2), unit_label),
-      kpi_card("Month change", format_change(mom_change, unit_label), format_percent(mom_pct), ifelse(mom_change > 0, "kfp-up", "kfp-down")),
+      kpi_card("Latest month", format(latest_month, "%b %Y"), price_coverage_label(latest_row$observations, latest_row$markets, latest_row$counties, sum(is.finite(monthly$mean_price)))),
+      kpi_card("Price estimate", format_number(current_price, 2), paste(unit_label, "-", calculation_label())),
+      kpi_card("Month change", format_change(mom_change, unit_label), if (isTRUE(latest_row$consecutive_month)) format_percent(mom_pct) else "Not available: prior calendar month has no observation", ifelse(mom_change > 0, "kfp-up", "kfp-down")),
       kpi_card("Year change", format_percent(yoy_pct), paste("vs", format(yoy_month, "%b %Y")), ifelse(yoy_pct > 0, "kfp-up", "kfp-down")),
-      kpi_card("Counties", format_number(uniqueN(dt$county, na.rm = TRUE)), "in selected data"),
-      kpi_card("Markets", format_number(uniqueN(dt$market, na.rm = TRUE)), "in selected data")
+      kpi_card("Counties", format_number(latest_row$counties), "in latest month"),
+      kpi_card("Markets", format_number(latest_row$markets), "in latest month")
     )
   })
 
@@ -370,8 +378,8 @@ app_server <- function(input, output, session) {
     monthly[, tooltip := paste0(
       "Month: ", format(year_month_date, "%b %Y"),
       "<br>Average price: ", format_number(mean_price, 2), " ", price_unit_label(),
-      "<br>Records: ", format_number(observations),
-      "<br>Markets: ", format_number(markets)
+      "<br>", calculation_label(),
+      "<br>Coverage: ", price_coverage_label(observations, markets, counties)
     )]
     monthly[, month_id := as.character(year_month_date)]
 
@@ -408,9 +416,7 @@ app_server <- function(input, output, session) {
     monthly <- copy(monthly_summary())
     validate(need(nrow(monthly) > 0, "No monthly data available."))
 
-    monthly[, previous_price := shift(mean_price)]
-    monthly[, change := mean_price - previous_price]
-    monthly[, pct_change := fifelse(previous_price != 0, change / previous_price, NA_real_)]
+    monthly[, pct_change := percent_change]
 
     display <- monthly[order(-year_month_date)][1:min(.N, 12)][
       ,
@@ -419,7 +425,7 @@ app_server <- function(input, output, session) {
         `Average Price` = format_number(mean_price, 2),
         Change = vapply(change, format_change, character(1), unit_label = price_unit_label()),
         `% Change` = vapply(pct_change, format_percent, character(1)),
-        Records = observations
+        Coverage = vapply(seq_len(.N), function(i) price_coverage_label(observations[i], markets[i], counties[i]), character(1))
       )
     ]
 
@@ -427,17 +433,16 @@ app_server <- function(input, output, session) {
   })
 
   output$top_county_table <- DT::renderDT({
-    dt <- filtered_data()[!is.na(county)]
-    price_val <- price_column()
-    validate(need(nrow(dt) > 0, "No county data available."))
-
-    display <- dt[
+    monthly <- data.table::copy(price_aggregation()$county_month)
+    validate(need(nrow(monthly) > 0, "No county data available. Try all counties, broaden the date range, or reset the county filter."))
+    display <- monthly[
       ,
       .(
-        `Average Price` = mean(get(price_val), na.rm = TRUE),
-        `Latest Date` = max(date, na.rm = TRUE),
-        Records = .N,
-        Markets = uniqueN(market)
+        `Average Price` = if (identical(input$calculation, "record_weighted_mean")) stats::weighted.mean(estimate, records) else stats::median(estimate),
+        `Latest Date` = max(year_month_date),
+        Records = sum(records),
+        Markets = max(markets),
+        `Covered Months` = .N
       ),
       by = .(County = county)
     ][order(-`Average Price`)][1:min(.N, 10)]
@@ -448,17 +453,16 @@ app_server <- function(input, output, session) {
   })
 
   output$top_market_table <- DT::renderDT({
-    dt <- filtered_data()[!is.na(market)]
-    price_val <- price_column()
-    validate(need(nrow(dt) > 0, "No market data available."))
-
-    display <- dt[
+    monthly <- data.table::copy(price_aggregation()$market_month)
+    validate(need(nrow(monthly) > 0, "No market data available. Try all markets, broaden the date range, or reset the market filter."))
+    display <- monthly[
       ,
       .(
-        County = county[which.max(date)],
-        `Average Price` = mean(get(price_val), na.rm = TRUE),
-        `Latest Date` = max(date, na.rm = TRUE),
-        Records = .N
+        County = county[which.max(year_month_date)],
+        `Average Price` = if (identical(input$calculation, "record_weighted_mean")) stats::weighted.mean(estimate, records) else stats::median(estimate),
+        `Latest Date` = max(year_month_date),
+        Records = sum(records),
+        `Covered Months` = .N
       ),
       by = .(Market = market)
     ][order(-`Average Price`)][1:min(.N, 10)]
@@ -575,15 +579,27 @@ app_server <- function(input, output, session) {
       NA_real_
     }
 
-    volatility <- if (nrow(monthly) > 1) stats::sd(monthly$mean_price, na.rm = TRUE) else NA_real_
+    volatility <- if (nrow(monthly) > 1) {
+      stats::sd(monthly$mean_price, na.rm = TRUE)
+    } else {
+      NA_real_
+    }
 
     div(
       class = "kfp-kpi-grid kfp-trends-kpis",
-      kpi_card("Latest price", format_number(latest$mean_price, 2), price_unit_label()),
+      kpi_card(
+        "Latest price",
+        format_number(latest$mean_price, 2),
+        price_unit_label()
+      ),
       kpi_card(
         "12-month change",
         format_percent(yoy_pct),
-        if (nrow(previous) > 0) paste("vs", format(previous_date, "%b %Y")) else "Not available",
+        if (nrow(previous) > 0) {
+          paste("vs", format(previous_date, "%b %Y"))
+        } else {
+          "Not available"
+        },
         ifelse(is.na(yoy_pct), "", ifelse(yoy_pct > 0, "kfp-up", "kfp-down"))
       ),
       kpi_card("Period high", format_number(max(monthly$mean_price, na.rm = TRUE), 2), price_unit_label()),
@@ -673,7 +689,11 @@ app_server <- function(input, output, session) {
     gg <- gg +
       ggplot2::labs(
         title = paste(input$commodity, input$pricetype, "price trend"),
-        x = if (identical(input$trend_frequency, "quarter")) "Quarter" else "Month",
+        x = if (identical(input$trend_frequency, "quarter")) {
+          "Quarter"
+        } else {
+          "Month"
+        },
         y = paste("Average price", price_unit_label())
       ) +
       ggplot2::scale_x_date(date_labels = "%Y", date_breaks = "2 years") +
@@ -704,12 +724,17 @@ app_server <- function(input, output, session) {
       .(
         Month = format(year_month_date, "%b %Y"),
         avg_price = format_number(mean_price, 2),
-        Change = vapply(change, format_change, character(1), unit_label = price_unit_label()),
+        Change = vapply(change, format_change, character(1),
+          unit_label = price_unit_label()
+        ),
         pct_change = vapply(pct_change, format_percent, character(1)),
         Records = observations
       )
     ]
-    data.table::setnames(display, c("avg_price", "pct_change"), c("Average price", "% change"))
+    data.table::setnames(
+      display, c("avg_price", "pct_change"),
+      c("Average price", "% change")
+    )
 
     datatable_compact(display, page_length = 12)
   })
@@ -717,7 +742,10 @@ app_server <- function(input, output, session) {
   output$main_price_histogram <- ggiraph::renderGirafe({
     price_val <- price_column()
     dt <- filtered_data()[is.finite(get(price_val))]
-    validate(need(nrow(dt) > 2, "There is not enough data for an annual price trend."))
+    validate(need(
+      nrow(dt) > 2,
+      "There is not enough data for an annual price trend."
+    ))
 
     annual <- dt[
       ,
@@ -733,8 +761,10 @@ app_server <- function(input, output, session) {
     annual[, year_id := as.character(calendar_year)]
     annual[, hover_text := paste0(
       "Year: ", calendar_year,
-      "<br>Average price: ", format_number(mean_price, 2), " ", price_unit_label(),
-      "<br>Range: ", format_number(min_price, 2), " - ", format_number(max_price, 2),
+      "<br>Average price: ", format_number(mean_price, 2),
+      " ", price_unit_label(),
+      "<br>Range: ", format_number(min_price, 2), " - ",
+      format_number(max_price, 2),
       "<br>Records: ", format_number(observations)
     )]
 
@@ -947,21 +977,20 @@ app_server <- function(input, output, session) {
 
   map_data <- reactive({
     dt <- filtered_data()[!is.na(latitude) & !is.na(longitude)]
-    price_val <- price_column()
-    validate(need(nrow(dt) > 0, "No mapped market data available."))
-
-    dt[
+    monthly <- price_aggregation()$market_month
+    validate(need(nrow(monthly) > 0, "No mapped market data available. Try all markets, broaden the date range, or reset the county filter."))
+    location <- dt[, .(county = county[which.max(date)], latitude = mean(latitude), longitude = mean(longitude)), by = market]
+    summary <- monthly[
       ,
       .(
-        county = county[which.max(date)],
-        latitude = mean(latitude, na.rm = TRUE),
-        longitude = mean(longitude, na.rm = TRUE),
-        avg_price = mean(get(price_val), na.rm = TRUE),
-        latest_date = max(date, na.rm = TRUE),
-        records = .N
+        avg_price = if (identical(input$calculation, "record_weighted_mean")) stats::weighted.mean(estimate, records) else stats::median(estimate),
+        latest_date = max(year_month_date),
+        records = sum(records),
+        covered_months = .N
       ),
-      by = .(market)
-    ][order(-avg_price)]
+      by = market
+    ]
+    merge(location, summary, by = "market")[order(-avg_price)]
   })
 
   output$price_map <- ggiraph::renderGirafe({

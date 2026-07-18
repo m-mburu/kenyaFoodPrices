@@ -21,6 +21,17 @@ knitr::opts_chunk$set(
 
 This package visualizes food prices and climate conditions in Kenya. Food-price data is sourced from the World Food Programme (WFP) through the [Humanitarian Data Exchange](https://data.humdata.org/dataset/wfp-food-prices-for-kenya?). Rainfall and vegetation indicators originate from WFP and use the World Bank [Joint Food Security Monitor](https://microdata.worldbank.org/catalog/8115) harmonization to current Kenyan administrative boundaries. The app is hosted on shinyapps.io and can be accessed [here](https://mmburu.shinyapps.io/kenyaFoodPrices/).
 
+## Price estimates and coverage
+
+The dashboard defaults to a balanced median: it takes each market's monthly
+median, then each county's monthly median, then the national monthly median.
+This prevents locations with more raw records from receiving extra weight.
+Users can choose a clearly labelled record-weighted mean when that is the
+appropriate question. Every price panel reports its calculation and coverage.
+Month-on-month changes are shown only when the immediately preceding calendar
+month has an observation; gaps are reported as not available rather than
+silently treated as one-month changes.
+
 The Climate tab provides county rainfall and vegetation choropleths first, followed by county trends and exploratory lagged relationships with the selected commodity price. See [CLIMATE_IMPLEMENTATION.md](CLIMATE_IMPLEMENTATION.md) for the download, processing, data structure, visual design and limitations.
 
 ## Latest climate conditions

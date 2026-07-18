@@ -105,7 +105,7 @@ climate_map_plot <- function(
   climate_monthly
 ) {
   if (identical(type, "rainfall")) {
-    map_sf$display_value <- if (condition_view) map_sf$rainfall_z else map_sf$rainfall_mm
+    map_sf$display_value <- if (condition_view) map_sf$rainfall_condition else map_sf$rainfall_mm
     map_sf$map_tooltip <- paste0(
       "County: ", map_sf$county,
       "\nMonth: ", format(selected_date, "%B %Y"),
@@ -113,9 +113,9 @@ climate_map_plot <- function(
       "\nStandardised condition: ", format_number(map_sf$rainfall_z, 2),
       "\nAssessment: ", map_sf$rainfall_condition
     )
-    legend_title <- if (condition_view) "Rainfall vs normal\n(z-score)" else "Rainfall\n(mm/dekad)"
+    legend_title <- if (condition_view) "Rainfall condition" else "Rainfall\n(mm/dekad)"
   } else {
-    map_sf$display_value <- if (condition_view) map_sf$ndvi_z else map_sf$ndvi
+    map_sf$display_value <- if (condition_view) map_sf$ndvi_condition else map_sf$ndvi
     map_sf$map_tooltip <- paste0(
       "County: ", map_sf$county,
       "\nMonth: ", format(selected_date, "%B %Y"),
@@ -123,7 +123,7 @@ climate_map_plot <- function(
       "\nStandardised condition: ", format_number(map_sf$ndvi_z, 2),
       "\nAssessment: ", map_sf$ndvi_condition
     )
-    legend_title <- if (condition_view) "Greenness vs normal\n(z-score)" else "Average NDVI"
+    legend_title <- if (condition_view) "Greenness condition" else "Average NDVI"
   }
 
   plot <- ggplot2::ggplot(map_sf) +
@@ -146,13 +146,16 @@ climate_map_plot <- function(
     )
 
   if (condition_view) {
-    plot + ggplot2::scale_fill_gradient2(
-      low = if (identical(type, "rainfall")) "#8c510a" else "#8c2d04",
-      mid = "#f7f7f7",
-      high = if (identical(type, "rainfall")) "#01665e" else "#238443",
-      midpoint = 0,
-      limits = c(-2, 2),
-      oob = scales::squish,
+    plot + ggplot2::scale_fill_manual(
+      values = c(
+        "Much below normal" = "#8c510a",
+        "Below normal" = "#d95f0e",
+        "Near normal" = "#f7f7f7",
+        "Above normal" = "#4dac9d",
+        "Much above normal" = "#01665e",
+        "Not available" = "#d9d9d9"
+      ),
+      drop = FALSE,
       na.value = "#d9d9d9"
     )
   } else if (identical(type, "rainfall")) {

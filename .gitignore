@@ -54,3 +54,6 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 README.html
+
+# Local LLM implementation instructions
+/dev/UI_UX_IMPLEMENTATION_INSTRUCTIONS.md

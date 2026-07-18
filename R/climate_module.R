@@ -141,7 +141,14 @@ prepare_climate_geometry <- function(counties, county_lookup) {
 #' @importFrom plotly layout plot_ly renderPlotly
 #' @importFrom shiny HTML moduleServer need observe observeEvent reactive renderUI req updateSelectInput validate
 #' @noRd
-climate_module_server <- function(id, price_data, price_column, price_unit_label) {
+climate_module_server <- function(
+  id,
+  price_data,
+  price_column,
+  price_unit_label,
+  global_county = NULL,
+  set_global_county = NULL
+) {
   shiny::moduleServer(id, function(input, output, session) {
     climate <- app_climate()
     climate_monthly <- climate$county_monthly
@@ -237,7 +244,22 @@ climate_module_server <- function(id, price_data, price_column, price_unit_label
     select_clicked_county <- function(selected) {
       if (length(selected) == 1L && selected %in% county_lookup$adm1_pcode) {
         shiny::updateSelectInput(session, "county", selected = selected)
+        if (is.function(set_global_county)) {
+          set_global_county(county_lookup[adm1_pcode == selected, county][1L])
+        }
       }
+    }
+
+    if (is.function(global_county)) {
+      shiny::observeEvent(global_county(), {
+        county <- global_county()
+        if (identical(county, "All")) {
+          shiny::updateSelectInput(session, "county", selected = "All")
+        } else {
+          target <- county_lookup[county_key == normalise_county_name(county), adm1_pcode][1L]
+          if (!is.na(target)) shiny::updateSelectInput(session, "county", selected = target)
+        }
+      }, ignoreInit = TRUE)
     }
 
     shiny::observeEvent(
@@ -306,17 +328,15 @@ climate_module_server <- function(id, price_data, price_column, price_unit_label
       }
       shiny::validate(shiny::need(nrow(prices) > 1, "No county price observations match the active filters."))
 
-      by_county <- prices[
-        ,
-        .(county_price = stats::median(get(price_field), na.rm = TRUE)),
-        by = .(date = year_month_date, county)
-      ]
-      monthly <- by_county[
-        ,
-        .(median_price = stats::median(county_price, na.rm = TRUE)),
-        by = date
-      ][order(date)]
-      monthly[, price_change := 100 * (log(median_price) - data.table::shift(log(median_price)))]
+      aggregation <- aggregate_price_data(prices, price_field, "balanced_median")
+      monthly <- data.table::copy(aggregation$national_month)
+      data.table::setnames(monthly, c("year_month_date", "estimate"), c("date", "median_price"))
+      monthly <- complete_monthly_changes(monthly, date_column = "date", value_column = "median_price")
+      monthly[, price_change := data.table::fifelse(
+        consecutive_month & median_price > 0 & previous_estimate > 0,
+        100 * (log(median_price) - log(previous_estimate)),
+        NA_real_
+      )]
       monthly
     })
 
