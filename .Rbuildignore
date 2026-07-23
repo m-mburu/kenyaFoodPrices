@@ -26,3 +26,4 @@ $run_dev.*
 ^CLIMATE_IMPLEMENTATION\.md$
 ^kenyaFoodPrices_[0-9.]+\.tar\.gz$
 ^kenyaFoodPrices\.Rcheck$
+^debug.log$
