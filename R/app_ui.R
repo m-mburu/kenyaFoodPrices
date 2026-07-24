@@ -7,7 +7,8 @@
 #' @importFrom ggiraph girafeOutput
 #' @importFrom plotly plotlyOutput
 #' @importFrom shinycssloaders withSpinner
-#' @importFrom shiny column div fluidPage fluidRow h3 h4 navbarPage p radioButtons selectInput tabPanel tagList uiOutput
+#' @importFrom shiny column div fluidPage fluidRow h3 h4 navbarPage
+#'   p radioButtons selectInput tabPanel tagList uiOutput
 #' @noRd
 #'
 
@@ -397,6 +398,27 @@ golem_add_external_resources <- function() {
       path = app_sys("app/www"),
       app_title = "kenyaFoodPrices"
     ),
-    tags$meta(name = "description", content = "Kenya food prices and climate conditions dashboard")
+    tags$script(
+      async = NA,
+      src = paste0(
+        "https://www.googletagmanager.com/gtag/js?id=",
+        "G-BFNZ97VTLJ"
+      )
+    ),
+    tags$script(
+      HTML(
+        paste(
+          "window.dataLayer = window.dataLayer || [];",
+          "function gtag(){dataLayer.push(arguments);}",
+          "gtag('js', new Date());",
+          "gtag('config', 'G-BFNZ97VTLJ');",
+          sep = "\n"
+        )
+      )
+    ),
+    tags$meta(
+      name = "description",
+      content = "Kenya food prices and climate conditions dashboard"
+    )
   )
 }
