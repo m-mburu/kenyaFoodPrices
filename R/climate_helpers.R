@@ -45,36 +45,76 @@ climate_condition <- function(z) {
 }
 
 prepare_jmr_climate <- function(jmr_data, pcodes) {
-  required_data <- c("adm2_pcode", "date", "indicator", "grouping", "value")
+  long_fields <- c("adm2_pcode", "date", "indicator", "grouping", "value")
+  wide_fields <- c(
+    "adm2_pcode", "year", "month",
+    "drought_ndvi_original", "drought_rainfall_original"
+  )
   required_pcodes <- c("adm1_pcode", "adm1_name", "adm2_pcode", "adm2_name")
 
-  if (!all(required_data %in% names(jmr_data))) {
-    stop("JMR data is missing required fields: ", paste(setdiff(required_data, names(jmr_data)), collapse = ", "))
-  }
   if (!all(required_pcodes %in% names(pcodes))) {
     stop("P-code data is missing required fields: ", paste(setdiff(required_pcodes, names(pcodes)), collapse = ", "))
   }
 
-  climate <- data.table::as.data.table(jmr_data)[
-    indicator %chin% c("Drought - NDVI", "Drought - rainfall") &
-      grouping %chin% c("Original value", "Indicator value"),
-    .(adm2_pcode, date, indicator, grouping, value)
-  ]
-  climate[, date := as.Date(date)]
-  climate[, measure := data.table::fcase(
-    indicator == "Drought - NDVI" & grouping == "Original value", "ndvi",
-    indicator == "Drought - NDVI" & grouping == "Indicator value", "ndvi_z",
-    indicator == "Drought - rainfall" & grouping == "Original value", "rainfall_mm",
-    indicator == "Drought - rainfall" & grouping == "Indicator value", "rainfall_z",
-    default = NA_character_
-  )]
-  climate <- climate[!is.na(measure)]
+  data <- data.table::as.data.table(jmr_data)
 
-  climate <- data.table::dcast(
-    climate,
-    adm2_pcode + date ~ measure,
-    value.var = "value"
-  )
+  if (all(long_fields %in% names(data))) {
+    climate <- data[
+      indicator %chin% c("Drought - NDVI", "Drought - rainfall") &
+        grouping %chin% c("Original value", "Indicator value"),
+      .(adm2_pcode, date, indicator, grouping, value)
+    ]
+    climate[, date := as.Date(date)]
+    climate[, measure := data.table::fcase(
+      indicator == "Drought - NDVI" & grouping == "Original value", "ndvi",
+      indicator == "Drought - NDVI" & grouping == "Indicator value", "ndvi_z",
+      indicator == "Drought - rainfall" & grouping == "Original value", "rainfall_mm",
+      indicator == "Drought - rainfall" & grouping == "Indicator value", "rainfall_z",
+      default = NA_character_
+    )]
+    climate <- climate[!is.na(measure)]
+
+    climate <- data.table::dcast(
+      climate,
+      adm2_pcode + date ~ measure,
+      value.var = "value"
+    )
+  } else if (all(wide_fields %in% names(data))) {
+    climate <- data[
+      ,
+      .(
+        adm2_pcode,
+        date = as.Date(sprintf("%04d-%02d-01", as.integer(year), as.integer(month))),
+        rainfall_mm = as.numeric(drought_rainfall_original),
+        ndvi = as.numeric(drought_ndvi_original)
+      )
+    ]
+    climate <- climate[date >= as.Date("2010-01-01")]
+
+    if (anyNA(climate$date)) {
+      stop("JMR wide data contains invalid year or month values.")
+    }
+    if (anyDuplicated(climate[, .(adm2_pcode, date)])) {
+      stop("JMR wide data contains duplicate ADM2-month rows.")
+    }
+
+    climate[, calendar_month := as.integer(format(date, "%m"))]
+    climate[
+      ,
+      `:=`(
+        rainfall_z = safe_zscore(rainfall_mm),
+        ndvi_z = safe_zscore(ndvi)
+      ),
+      by = .(adm2_pcode, calendar_month)
+    ]
+    climate[, calendar_month := NULL]
+  } else {
+    stop(
+      "JMR data does not match the supported long or wide schema. ",
+      "Missing long fields: ", paste(setdiff(long_fields, names(data)), collapse = ", "),
+      "; missing wide fields: ", paste(setdiff(wide_fields, names(data)), collapse = ", ")
+    )
+  }
 
   lookup <- unique(data.table::as.data.table(pcodes)[
     ,

@@ -34,6 +34,34 @@ test_that("JMR climate values reshape and aggregate predictably", {
   expect_equal(county$subcounties, 2)
 })
 
+test_that("wide JMR climate values are standardised by calendar month", {
+  jmr <- data.table::CJ(
+    adm2_pcode = c("KE001001", "KE001002"),
+    year = 2024:2026,
+    month = 7L
+  )
+  jmr[, drought_rainfall_original := seq_len(.N) * 10]
+  jmr[, drought_ndvi_original := seq_len(.N) / 10]
+
+  pcodes <- data.table::data.table(
+    adm1_pcode = "KE001",
+    adm1_name = "Mombasa",
+    adm2_pcode = c("KE001001", "KE001002"),
+    adm2_name = c("Changamwe", "Jomvu")
+  )
+
+  adm2 <- prepare_jmr_climate(jmr, pcodes)
+
+  expect_equal(nrow(adm2), 6)
+  expect_equal(range(adm2$date), as.Date(c("2024-07-01", "2026-07-01")))
+  expect_equal(
+    adm2[adm2_pcode == "KE001001" & date == as.Date("2024-07-01"), rainfall_mm],
+    10
+  )
+  expect_equal(adm2[, mean(rainfall_z), by = adm2_pcode]$V1, c(0, 0))
+  expect_equal(adm2[, mean(ndvi_z), by = adm2_pcode]$V1, c(0, 0))
+})
+
 test_that("lag correlations report both climate drivers", {
   dates <- seq(as.Date("2020-01-01"), by = "month", length.out = 30)
   rainfall <- seq_len(30)

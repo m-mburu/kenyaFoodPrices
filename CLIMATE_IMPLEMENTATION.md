@@ -35,9 +35,12 @@ The pipeline performs the following repeatable steps:
 2. Download each ZIP to a temporary working directory.
 3. Verify that each archive contains exactly one CSV and read it with
    `data.table::fread()`.
-4. Keep only rainfall and NDVI `Original value` and `Indicator value` rows.
-5. Reshape the long JMR values to one ADM2-month row containing:
-   `rainfall_mm`, `rainfall_z`, `ndvi`, and `ndvi_z`.
+4. Accept both the legacy long JMR layout and the current wide ADM2-month
+   layout. Keep the physical rainfall and NDVI values from either schema.
+5. Produce one ADM2-month row containing `rainfall_mm`, `rainfall_z`, `ndvi`,
+   and `ndvi_z`. For the wide layout, standardise physical values within each
+   ADM2 and calendar month so the condition scores remain seasonally
+   comparable.
 6. Join and validate all 290 ADM2 P-codes.
 7. Summarise ADM2 indicators to all 47 counties using an unweighted mean and
    retain coverage counts.

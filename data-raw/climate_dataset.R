@@ -114,7 +114,8 @@ build_kenya_climate <- function(work_dir = tempfile("kenya-climate-")) {
       boundary_standard = "OCHA Common Operational Dataset (COD)",
       aggregation = paste(
         "Unweighted mean of harmonised ADM2 values within each county;",
-        "physical values and JMR standardised indicators are retained."
+        "physical values are retained and wide-format values are standardised",
+        "within each ADM2 and calendar month."
       ),
       source_version = source_version,
       data_start = min(county_monthly$date),
