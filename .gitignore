@@ -57,3 +57,6 @@ README.html
 
 # Local LLM implementation instructions
 /dev/UI_UX_IMPLEMENTATION_INSTRUCTIONS.md
+
+# Raw GADM download cache (about 46 MB); prepared layers live in data/
+data-raw/gadm/

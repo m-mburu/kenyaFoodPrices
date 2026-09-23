@@ -2,15 +2,12 @@
 #'
 #' Description.
 #'
-#' @format A data frame with 47 rows and 8 variables:
+#' @format A data frame with 47 rows and 5 variables:
 #' \describe{
+#'   \item{ GID_1 }{  character }
 #'   \item{ county }{  character }
-#'   \item{ population }{  factor }
-#'   \item{ area }{  numeric }
-#'   \item{ pd }{  numeric }
-#'   \item{ pdr }{  numeric }
-#'   \item{ factor }{  numeric }
-#'   \item{ cri }{  numeric }
+#'   \item{ TYPE_1 }{  character }
+#'   \item{ GID_0 }{  character }
 #'   \item{ geometry }{  sfc_MULTIPOLYGON,sfc }
 #' }
 #' @source Source

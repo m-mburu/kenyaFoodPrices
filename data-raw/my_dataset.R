@@ -89,15 +89,28 @@ ke_food_prices <- create_unique_ids(ke_food_prices)
 
 
 
-load("data-raw/kenya_counties.rda")
+# Prefer the GADM county layer (valid WGS84 polygons prepared by
+# data-raw/kenya_counties_gadm.R). Fall back to the legacy layer if the GADM
+# file has not been built yet.
+gadm_counties_file <- file.path("data", "kenya_counties_gadm.rda")
+
+if (file.exists(gadm_counties_file)) {
+  load(gadm_counties_file)  # provides kenya_counties_gadm
+  kenya_counties <- kenya_counties_gadm
+  rm(kenya_counties_gadm)
+} else {
+  load("data-raw/kenya_counties.rda")  # provides kenya_counties
+}
 
 library(sf)
 
-# `kenya_counties` is stored as a data.table with an `sfc_*` geometry column.
-# Make sure it has a CRS; otherwise `st_transform()` / `st_join()` will fail.
-# The counties layer is in UTM zone 37S (EPSG:17037).
-if (is.na(sf::st_crs(kenya_counties$geometry))) {
-  sf::st_crs(kenya_counties$geometry) <- 17037
+# `kenya_counties` may be a data.table with an `sfc_*` geometry column, or the
+# GADM `sf` object. Make sure it has a CRS so `st_transform()` / `st_join()`
+# behave; the legacy layer is UTM zone 37S (EPSG:17037), GADM is EPSG:4326.
+kenya_counties <- sf::st_as_sf(kenya_counties)
+
+if (is.na(sf::st_crs(kenya_counties))) {
+  sf::st_crs(kenya_counties) <- 17037
 }
 
 # Function to assign counties to GPS coordinates
@@ -120,7 +133,7 @@ assign_counties <- function(data_points, counties_sf) {
   return(result)
 }
 
-kenya_counties[, county := stringr::str_to_title(county)]
+kenya_counties$county <- stringr::str_to_title(kenya_counties$county)
 
 ke_food_prices <- ke_food_prices[!is.na(longitude) & !is.na(latitude)]
 kenya_counties_ids <- assign_counties(ke_food_prices, kenya_counties)

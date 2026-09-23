@@ -121,12 +121,23 @@ market_price_map <- function(
   standard_girafe(plot, width_svg = 8, height_svg = 6.4)
 }
 
+# Build a county climate choropleth.
+# - `focus_bounds` (optional numeric xmin/ymin/xmax/ymax) zooms the map to a
+#   selected county while keeping the national fill for context.
+# - `detail_sf` (optional sf) draws uncoloured internal unit outlines (sub-
+#   counties or wards) inside the focused county. These are reference only;
+#   the climate values remain county-level estimates, so detail units are not
+#   coloured by value. `detail_name` is the label column used on hover.
 climate_map_plot <- function(
   map_sf,
   type,
   condition_view,
   selected_date,
-  climate_monthly
+  climate_monthly,
+  focus_bounds = NULL,
+  detail_sf = NULL,
+  detail_name = NULL,
+  focus_label = NULL
 ) {
   if (identical(type, "rainfall")) {
     map_sf$display_value <- if (condition_view) map_sf$rainfall_condition else map_sf$rainfall_mm
@@ -159,8 +170,46 @@ climate_map_plot <- function(
       ),
       colour = "#ffffff",
       linewidth = 0.35
-    ) +
-    ggplot2::coord_sf(datum = NA) +
+    )
+
+  # Detail outlines (sub-counties/wards) are reference geometry, not observed
+  # values, so they are drawn as uncoloured boundaries with a name tooltip.
+  if (!is.null(detail_sf) && nrow(detail_sf) > 0 && !is.null(detail_name)) {
+    detail_sf <- sf::st_set_geometry(detail_sf, attr(detail_sf, "sf_column"))
+    detail_sf$detail_tooltip <- paste0(
+      detail_sf[[detail_name]],
+      "\n(reference boundary - climate values are county-level estimates)"
+    )
+    detail_sf$detail_id <- as.character(seq_len(nrow(detail_sf)))
+    plot <- plot +
+      ggiraph::geom_sf_interactive(
+        data = detail_sf,
+        ggplot2::aes(
+          tooltip = detail_tooltip,
+          data_id = detail_id
+        ),
+        fill = NA,
+        colour = "#345151",
+        linewidth = 0.5
+      )
+  }
+
+  # Zoom to the focused county when its bounds are supplied.
+  if (!is.null(focus_bounds) && length(focus_bounds) == 4L) {
+    pad_x <- (focus_bounds[3] - focus_bounds[1]) * 0.06
+    pad_y <- (focus_bounds[4] - focus_bounds[2]) * 0.06
+    plot <- plot +
+      ggplot2::coord_sf(
+        datum = NA,
+        xlim = focus_bounds[c(1, 3)] + c(-pad_x, pad_x),
+        ylim = focus_bounds[c(2, 4)] + c(-pad_y, pad_y),
+        expand = FALSE
+      )
+  } else {
+    plot <- plot + ggplot2::coord_sf(datum = NA)
+  }
+
+  plot <- plot +
     ggplot2::labs(fill = legend_title) +
     ggplot2::theme_void(base_size = 12) +
     ggplot2::theme(

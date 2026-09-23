@@ -9,7 +9,10 @@ test_that("packaged climate data has current county coverage", {
     rep(47L, data.table::uniqueN(climate$county_monthly$date))
   )
   expect_true(all(climate$county_monthly$rainfall_mm >= 0))
-  expect_true(all(data.table::between(climate$county_monthly$ndvi, -1, 1)))
+  # NDVI is occasionally missing for a whole month in the source feed; check
+  # the observed values are within the physical [-1, 1] range rather than
+  # requiring every month to be present.
+  expect_true(all(data.table::between(climate$county_monthly$ndvi, -1, 1), na.rm = TRUE))
 })
 
 test_that("all existing county polygons match a climate P-code", {
