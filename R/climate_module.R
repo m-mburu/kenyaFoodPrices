@@ -192,7 +192,8 @@ climate_module_server <- function(
   price_column,
   price_unit_label,
   global_county = NULL,
-  set_global_county = NULL
+  set_global_county = NULL,
+  reset_focus = NULL
 ) {
   shiny::moduleServer(id, function(input, output, session) {
     climate <- app_climate()
@@ -465,6 +466,14 @@ climate_module_server <- function(
           set_global_county(county_name)
         }
       }
+    }
+
+    if (is.function(reset_focus)) {
+      shiny::observeEvent(reset_focus(), {
+        if (!identical(input$county, "All")) {
+          shiny::updateSelectInput(session, "county", selected = "All")
+        }
+      }, ignoreInit = TRUE)
     }
 
     if (is.function(global_county)) {

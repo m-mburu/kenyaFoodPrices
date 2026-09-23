@@ -25,3 +25,17 @@ test_that("compact tables let people choose how many rows to show", {
   expect_equal(options$lengthMenu[[1]], c(6L, 10L, 25L, -1L))
   expect_equal(options$lengthMenu[[2]], c("6", "10", "25", "All"))
 })
+
+test_that("incomplete reset date ranges cannot enter price filters", {
+  expect_false(valid_price_date_range(NULL))
+  expect_false(valid_price_date_range(as.Date(NA)))
+  expect_false(valid_price_date_range(as.Date(c(
+    "2006-01-15", NA
+  ))))
+  expect_false(valid_price_date_range(as.Date(c(
+    "2026-01-01", "2006-01-15"
+  ))))
+  expect_true(valid_price_date_range(as.Date(c(
+    "2006-01-15", "2026-08-15"
+  ))))
+})
