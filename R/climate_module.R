@@ -147,6 +147,15 @@ prepare_climate_geometry <- function(counties, county_lookup) {
   counties_sf
 }
 
+county_pcode_for_name <- function(county_name, county_lookup) {
+  if (identical(county_name, "All")) {
+    return("All")
+  }
+
+  target_key <- normalise_county_name(county_name)
+  county_lookup[county_key == target_key, adm1_pcode][1L]
+}
+
 #' Climate dashboard server
 #'
 #' @param id Module identifier.
@@ -296,8 +305,12 @@ climate_module_server <- function(
     })
 
     shiny::observeEvent(input$back_to_kenya, {
-      shiny::updateSelectInput(session, "county", selected = "All")
-      if (is.function(set_global_county)) {
+      if (!identical(input$county, "All")) {
+        shiny::updateSelectInput(session, "county", selected = "All")
+      }
+      if (is.function(set_global_county) &&
+          (!is.function(global_county) ||
+           !identical(global_county(), "All"))) {
         set_global_county("All")
       }
     }, ignoreInit = TRUE)
@@ -351,34 +364,43 @@ climate_module_server <- function(
     })
 
     select_clicked_county <- function(selected) {
-      if (length(selected) == 1L && selected %in% county_lookup$adm1_pcode) {
-        shiny::updateSelectInput(session, "county", selected = selected)
-        if (is.function(set_global_county)) {
-          set_global_county(county_lookup[adm1_pcode == selected, county][1L])
+      if (length(selected) != 1L ||
+          !selected %in% county_lookup$adm1_pcode ||
+          identical(input$county, selected)) {
+        return(invisible(NULL))
+      }
+
+      shiny::updateSelectInput(session, "county", selected = selected)
+      if (is.function(set_global_county)) {
+        county_name <- county_lookup[
+          adm1_pcode == selected,
+          county
+        ][1L]
+        if (!is.function(global_county) ||
+            !identical(
+              normalise_county_name(global_county()),
+              normalise_county_name(county_name)
+            )) {
+          set_global_county(county_name)
         }
       }
     }
 
     if (is.function(global_county)) {
       shiny::observeEvent(global_county(), {
-        county <- global_county()
-        if (identical(county, "All")) {
-          shiny::updateSelectInput(session, "county", selected = "All")
-        } else {
-          target <- county_lookup[county_key == normalise_county_name(county), adm1_pcode][1L]
-          if (!is.na(target)) shiny::updateSelectInput(session, "county", selected = target)
+        county_name <- global_county()
+        target <- county_pcode_for_name(county_name, county_lookup)
+        if (!is.na(target) && !identical(input$county, target)) {
+          shiny::updateSelectInput(session, "county", selected = target)
         }
       }, ignoreInit = TRUE)
     }
 
+    # ggiraph reports selections when a map widget is rebuilt. Only real
+    # polygon clicks should change the focused county.
     shiny::observeEvent(
-      input$rainfall_map_selected,
-      select_clicked_county(input$rainfall_map_selected),
-      ignoreInit = TRUE
-    )
-    shiny::observeEvent(
-      input$vegetation_map_selected,
-      select_clicked_county(input$vegetation_map_selected),
+      input$map_clicked,
+      select_clicked_county(input$map_clicked),
       ignoreInit = TRUE
     )
 
