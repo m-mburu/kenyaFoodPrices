@@ -42,20 +42,32 @@ standard_girafe <- function(
   )
 }
 
-market_price_map <- function(map_df, counties, price_unit, currency) {
+market_price_map <- function(
+  map_df,
+  counties,
+  price_unit,
+  currency,
+  calculation = "balanced_median",
+  period_label = NULL
+) {
   county_sf <- sf::st_as_sf(
     data.table::copy(counties),
     sf_column_name = "geometry"
   )
   county_sf <- sf::st_transform(county_sf, 4326)
   map_df <- data.table::copy(map_df)
+  estimate_label <- price_calculation_short_label(calculation)
   map_df$map_tooltip <- paste0(
     "Market: ", map_df$market,
     "\nCounty: ", map_df$county,
-    "\nAverage price: ", format_number(map_df$avg_price, 2), " ", price_unit,
-    "\nLatest date: ", map_df$latest_date,
+    "\n", estimate_label, ": ", format_number(map_df$avg_price, 2),
+    " ", price_unit,
+    "\nLatest month: ", format(map_df$latest_date, "%b %Y"),
+    "\nCovered months: ", map_df$covered_months,
     "\nRecords: ", map_df$records
   )
+
+  legend_name <- paste0(estimate_label, "\n", price_unit)
 
   plot <- ggplot2::ggplot() +
     ggplot2::geom_sf(
@@ -81,16 +93,28 @@ market_price_map <- function(map_df, counties, price_unit, currency) {
     ggplot2::scale_colour_distiller(
       palette = "YlOrRd",
       direction = 1,
-      name = paste("Average", currency),
+      name = legend_name,
       oob = scales::squish
     ) +
     ggplot2::scale_size_continuous(
       range = c(3, 9),
       name = "Records"
     ) +
+    ggplot2::labs(
+      subtitle = if (!is.null(period_label)) {
+        paste0(
+          "Summarises the selected period (", period_label,
+          "); colour is the ", tolower(estimate_label),
+          ", marker size is the record count."
+        )
+      } else {
+        NULL
+      }
+    ) +
     ggplot2::theme_void(base_size = 12) +
     ggplot2::theme(
       legend.position = "bottom",
+      plot.subtitle = ggplot2::element_text(colour = "#536868", size = 11),
       plot.margin = ggplot2::margin(8, 8, 8, 8)
     )
 

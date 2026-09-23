@@ -27,31 +27,43 @@ filter_panel <- function() {
         )
       ),
       shiny::column(2, uiOutput("commodity_ui")),
-      shiny::column(2, uiOutput("unit_ui")),
       shiny::column(2, uiOutput("pricetype_ui")),
-      shiny::column(
-        2,
-        shiny::selectInput(
-          "Currency",
-          "Currency",
-          c("KES" = "price", "USD" = "usdprice")
+      shiny::column(3, uiOutput("page_year_ui")),
+      shiny::column(3, uiOutput("page1_county_ui"))
+    ),
+    # Currency, unit and calculation sit in an expandable section so the
+    # main controls stay reachable on small screens. The chip summary below
+    # keeps the selected unit and price type visible when this is collapsed.
+    tags$details(
+      class = "kfp-advanced-filters",
+      tags$summary("Unit, currency and calculation"),
+      fluidRow(
+        shiny::column(3, uiOutput("unit_ui")),
+        shiny::column(
+          3,
+          shiny::selectInput(
+            "Currency",
+            "Currency",
+            c("KES" = "price", "USD" = "usdprice")
+          )
+        ),
+        shiny::column(
+          6,
+          div(
+            class = "kfp-calculation-control",
+            radioButtons(
+              "calculation",
+              "Calculation",
+              choices = price_calculation_choices(),
+              selected = "balanced_median",
+              inline = TRUE
+            )
+          )
         )
-      ),
-      shiny::column(2, uiOutput("page_year_ui"))
+      )
     ),
     fluidRow(
-      shiny::column(3, uiOutput("page1_county_ui")),
       shiny::column(3, uiOutput("page1_market_ui"))
-    ),
-    div(
-      class = "kfp-calculation-control",
-      radioButtons(
-        "calculation",
-        "Calculation",
-        choices = price_calculation_choices(),
-        selected = "balanced_median",
-        inline = TRUE
-      )
     ),
     div(
       class = "kfp-filter-footer",
@@ -66,11 +78,12 @@ filter_panel <- function() {
   )
 }
 
-plot_panel <- function(title, output) {
+plot_panel <- function(title, output, footer = NULL) {
   div(
     class = "kfp-panel",
     h4(title),
-    output
+    output,
+    footer
   )
 }
 
@@ -133,7 +146,7 @@ app_ui <- function(request) {
               shiny::column(
                 6,
                 plot_panel(
-                  "Highest Average Prices by County",
+                  "Highest Price Estimates by County",
                   shinycssloaders::withSpinner(
                     DT::DTOutput("top_county_table"),
                     color = "#00a2ab"
@@ -143,7 +156,7 @@ app_ui <- function(request) {
               shiny::column(
                 6,
                 plot_panel(
-                  "Highest Average Prices by Market",
+                  "Highest Price Estimates by Market",
                   shinycssloaders::withSpinner(
                     DT::DTOutput("top_market_table"),
                     color = "#00a2ab"
@@ -283,10 +296,14 @@ app_ui <- function(request) {
               column(
                 4,
                 plot_panel(
-                  "Mapped Markets",
+                  shiny::textOutput("map_market_title", inline = TRUE),
                   shinycssloaders::withSpinner(
                     DT::DTOutput("map_market_table"),
                     color = "#00a2ab"
+                  ),
+                  footer = shiny::tags$p(
+                    class = "kfp-panel-note",
+                    shiny::textOutput("map_market_note", inline = TRUE)
                   )
                 )
               )

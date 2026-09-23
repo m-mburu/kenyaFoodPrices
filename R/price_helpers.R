@@ -16,6 +16,17 @@ price_calculation_label <- function(calculation) {
   )
 }
 
+# Short estimator name for axis titles, legends and table headings where the
+# full aggregation description would be too long.
+price_calculation_short_label <- function(calculation) {
+  switch(
+    calculation,
+    balanced_median = "Median price estimate",
+    record_weighted_mean = "Mean price estimate",
+    "Price estimate"
+  )
+}
+
 aggregate_price_data <- function(data, price_column, calculation = "balanced_median") {
   stopifnot(is.character(price_column), length(price_column) == 1L)
   if (!calculation %in% unname(price_calculation_choices())) {

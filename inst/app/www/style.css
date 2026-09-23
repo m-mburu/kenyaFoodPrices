@@ -760,3 +760,110 @@ div.quarto-post h3 a {
 .kfp-toggle-control .radio-inline input[type="radio"]:focus + span {
   box-shadow: 0 0 0 3px rgba(0, 162, 171, 0.18);
 }
+
+/* --------- UI revision: labels, tables, compact filters --------- */
+
+/* Cap content width so the map and tables align on wide screens. */
+.shiny-main-container {
+  max-width: 1500px !important;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Sentence-case brand instead of all-capitals. */
+.navbar .navbar-brand {
+  text-transform: none;
+  font-size: 18px;
+}
+
+/* Sans-serif body text for a consistent reading voice. */
+body {
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue",
+    Arial, sans-serif;
+}
+
+/* Expandable filter section; keeps unit/currency/calculation reachable but
+   out of the way on small screens. */
+.kfp-advanced-filters > summary {
+  min-height: 44px;
+  padding: 10px 0;
+  cursor: pointer;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Helvetica Neue",
+    Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: #132f2f;
+}
+
+.kfp-advanced-filters[open] > summary {
+  margin-bottom: 4px;
+}
+
+/* Small note under a panel, used for result scope explanations. */
+.kfp-panel-note {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: #536868;
+}
+
+/* Allow two-line table headings (estimate name + unit denominator). */
+.kfp-panel table.dataTable thead th {
+  white-space: pre-line;
+  vertical-align: bottom;
+  line-height: 1.25;
+  min-width: 64px;
+}
+
+/* Keep table scrolling inside the panel rather than the page. */
+.kfp-panel .dataTables_wrapper {
+  overflow-x: auto;
+}
+
+/* Let text columns (market names) wrap instead of forcing horizontal scroll. */
+.kfp-panel table.dataTable tbody td:first-child {
+  white-space: normal;
+  min-width: 110px;
+}
+
+/* Right-align numeric columns for easy scanning. Headings use two-line
+   labels so the unit sits under the estimate name on numeric columns. */
+.kfp-panel table.dataTable thead th.dt-right,
+.kfp-panel table.dataTable tbody td.dt-right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Reduce empty vertical space between filter rows. */
+.kfp-filter-band .form-group,
+.kfp-filter-band .shiny-input-container {
+  margin-bottom: 8px;
+}
+
+.kfp-filter-band .row {
+  margin-bottom: 2px;
+}
+
+/* Compact filter summary on small screens: chips remain visible while the
+   advanced section stays collapsed by default. */
+@media (max-width: 768px) {
+  .navbar .navbar-brand {
+    font-size: 15px;
+  }
+
+  .kfp-filter-band {
+    padding: 10px 12px 4px;
+  }
+
+  .kfp-filter-band .form-group,
+  .kfp-filter-band .shiny-input-container {
+    margin-bottom: 6px;
+  }
+
+  .kfp-filter-scope {
+    font-size: 11px;
+  }
+
+  .kfp-filter-context {
+    font-size: 12px;
+  }
+}
