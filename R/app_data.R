@@ -51,3 +51,48 @@ app_counties <- function() {
 
   .app_data_cache$kenya_counties
 }
+
+# Normalise a county name for matching (lowercase, strip punctuation/spaces).
+county_name_key <- function(x) {
+  gsub("[^a-z0-9]", "", tolower(trimws(x)))
+}
+
+# Simplified sub-county boundaries (GADM level 2), with a `county_key` derived
+# from the parent county name for joining to the app's county lookup.
+app_subcounties <- function() {
+  if (!exists("kenya_subcounties", envir = .app_data_cache, inherits = FALSE)) {
+    .app_data_cache$kenya_subcounties <- tryCatch({
+      utils::data(
+        "kenya_subcounties_gadm_simplified",
+        package = "kenyaFoodPrices",
+        envir = .app_data_cache
+      )
+      sc <- .app_data_cache$kenya_subcounties_gadm_simplified
+      .app_data_cache$kenya_subcounties_gadm_simplified <- NULL
+      sc$county_key <- county_name_key(sc$NAME_1)
+      sf::st_set_geometry(sc, "geometry")
+    }, error = function(e) NULL)
+  }
+
+  .app_data_cache$kenya_subcounties
+}
+
+# Simplified ward boundaries (GADM level 3). Loaded on demand for a single
+# county rather than shipped to the map on every interaction.
+app_wards <- function() {
+  if (!exists("kenya_wards", envir = .app_data_cache, inherits = FALSE)) {
+    .app_data_cache$kenya_wards <- tryCatch({
+      utils::data(
+        "kenya_wards_gadm_simplified",
+        package = "kenyaFoodPrices",
+        envir = .app_data_cache
+      )
+      wd <- .app_data_cache$kenya_wards_gadm_simplified
+      .app_data_cache$kenya_wards_gadm_simplified <- NULL
+      wd$county_key <- county_name_key(wd$NAME_1)
+      sf::st_set_geometry(wd, "geometry")
+    }, error = function(e) NULL)
+  }
+
+  .app_data_cache$kenya_wards
+}

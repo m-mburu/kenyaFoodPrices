@@ -61,7 +61,6 @@ prepare_level <- function(raw_file, layer, object_name, gadm_version, gadm_url) 
   boundaries <- st_read(raw_file, layer = layer, quiet = TRUE)
   boundaries <- st_as_sf(boundaries)
   boundaries <- boundaries[, intersect(keep_cols, names(boundaries))]
-
   # GADM 4.1 geometry is generally valid; repair is cheap insurance before
   # any later simplification step.
   if (!all(st_is_valid(boundaries))) {
@@ -89,9 +88,36 @@ prepare_level <- function(raw_file, layer, object_name, gadm_version, gadm_url) 
   message("Saved ", nrow(boundaries), " features to ", out)
 }
 
+# Helper: simplify polygons for display. Work in a projected CRS so the
+# tolerance is unambiguously metres (the sf st_simplify docs note that lon/lat
+# simplification under s2 takes metres but with s2 off it expects degrees).
+# We project to EPSG:21037 (Arc 1960 / UTM zone 37S, metres), simplify, repair,
+# drop any geometry emptied by simplification, then return to EPSG:4326 for the
+# web maps. Output stays a data.frame with sf geometry named `geometry`.
+simplify_boundaries <- function(boundaries, d_tolerance_m = 500) {
+  projected <- st_transform(boundaries, 21037)
+  simplified <- st_simplify(projected, preserveTopology = TRUE, dTolerance = d_tolerance_m)
+  # preserveTopology + make_valid can yield a mixture of POLYGON and
+  # MULTIPOLYGON (an sfc_GEOMETRY set). Collect back to pure MULTIPOLYGON and
+  # keep the geometry column consistently named `geometry`.
+  simplified <- st_make_valid(simplified)
+  simplified <- suppressWarnings(st_cast(simplified, "MULTIPOLYGON"))
+  simplified <- simplified[!st_is_empty(simplified), ]
+  out <- st_transform(simplified, 4326)
+  names(out)[names(out) == attr(out, "sf_column")] <- "geometry"
+  sf::st_geometry(out) <- "geometry"
+  out
+}
+
 # Only run when the prepared outputs are missing ----------------------------
 
-all_outputs_present <- all(file.exists(output_files))
+simplified_files <- c(
+  "kenya_subcounties_gadm_simplified",
+  "kenya_wards_gadm_simplified"
+)
+simplified_paths <- file.path("data", paste0(simplified_files, ".rda"))
+
+all_outputs_present <- all(file.exists(c(output_files, simplified_paths)))
 
 if (all_outputs_present && !force_download) {
   message(
@@ -120,4 +146,27 @@ if (all_outputs_present && !force_download) {
       gadm_url = gadm_url
     )
   }
+
+  # Precompute simplified detail layers so the server never simplifies on the
+  # fly. 500 m keeps outlines recognisable while cutting ~97% of vertices. Load
+  # into a private environment so the raw objects do not mask global names.
+  raw_env <- new.env()
+  load(file.path("data", "kenya_subcounties_gadm.rda"), envir = raw_env)
+  load(file.path("data", "kenya_wards_gadm.rda"), envir = raw_env)
+
+  kenya_subcounties_gadm_simplified <- simplify_boundaries(raw_env$kenya_subcounties_gadm, 500)
+  kenya_wards_gadm_simplified <- simplify_boundaries(raw_env$kenya_wards_gadm, 500)
+
+  attr(kenya_subcounties_gadm_simplified, "simplify_tolerance_m") <- 500
+  attr(kenya_wards_gadm_simplified, "simplify_tolerance_m") <- 500
+
+  save(kenya_subcounties_gadm_simplified,
+       file = file.path("data", "kenya_subcounties_gadm_simplified.rda"), compress = "bzip2")
+  save(kenya_wards_gadm_simplified,
+       file = file.path("data", "kenya_wards_gadm_simplified.rda"), compress = "bzip2")
+
+  message(
+    "Saved simplified sub-counties (", nrow(kenya_subcounties_gadm_simplified),
+    ") and wards (", nrow(kenya_wards_gadm_simplified), ") at 500 m tolerance."
+  )
 }

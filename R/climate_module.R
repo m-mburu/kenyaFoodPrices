@@ -45,7 +45,11 @@ climate_module_ui <- function(id) {
       shiny::div(
         class = "kfp-context-note",
         "The commodity, unit, price type and currency filters above apply to the price analysis below; they do not change the climate maps."
-      )
+      ),
+      # Drill-down controls, shown when a single county is focused. The detail
+      # units (sub-counties or wards) are reference boundaries only; climate
+      # values remain county-level estimates.
+      shiny::uiOutput(ns("drill_controls"))
     ),
     shiny::uiOutput(ns("climate_summary")),
     shiny::fluidRow(
@@ -208,6 +212,96 @@ climate_module_server <- function(
       county_lookup[adm1_pcode == input$county, county][1L]
     })
 
+    # Detail level for the focused county's internal boundaries.
+    detail_level <- shiny::reactive({
+      input$detail_level %||% "subcounty"
+    })
+
+    # Drill-down controls and reset, shown only when a single county is focused.
+    output$drill_controls <- shiny::renderUI({
+      shiny::req(input$county)
+      if (identical(input$county, "All")) {
+        return(NULL)
+      }
+
+      shiny::div(
+        class = "kfp-drill-controls",
+        shiny::div(
+          class = "kfp-toggle-control",
+          shiny::radioButtons(
+            session$ns("detail_level"),
+            "Show local boundaries",
+            choices = c(
+              "Sub-counties" = "subcounty",
+              "Wards" = "ward"
+            ),
+            selected = detail_level(),
+            inline = TRUE
+          )
+        ),
+        shiny::tags$p(
+          class = "kfp-panel-note",
+          "Local boundaries are shown for reference; rainfall and vegetation values are county-level estimates."
+        ),
+        shiny::actionButton(
+          session$ns("back_to_kenya"),
+          "All Kenya",
+          class = "kfp-reset-button"
+        )
+      )
+    })
+
+    # Detail geometry for the focused county (sub-county by default, ward on
+    # request). Only the focused county's units are returned, so no large
+    # boundary set is prepared or transmitted unless it is needed.
+    focus_detail <- shiny::reactive({
+      shiny::req(input$county)
+      if (identical(input$county, "All")) {
+        return(list(sf = NULL, name_col = NULL))
+      }
+      ckey <- county_lookup[adm1_pcode == input$county, county_key][1L]
+      if (is.na(ckey)) {
+        return(list(sf = NULL, name_col = NULL))
+      }
+
+      if (identical(detail_level(), "ward")) {
+        layer <- app_wards()
+        name_col <- "NAME_3"
+      } else {
+        layer <- app_subcounties()
+        name_col <- "NAME_2"
+      }
+      if (is.null(layer)) {
+        return(list(sf = NULL, name_col = NULL))
+      }
+
+      subset <- layer[layer$county_key == ckey, ]
+      if (nrow(subset) == 0) {
+        return(list(sf = NULL, name_col = NULL))
+      }
+      list(sf = subset, name_col = name_col)
+    })
+
+    # Bounding box of the focused county, used to zoom both maps.
+    focus_bounds <- shiny::reactive({
+      shiny::req(input$county)
+      if (identical(input$county, "All")) {
+        return(NULL)
+      }
+      geom <- county_geometry[county_geometry$adm1_pcode == input$county, ]
+      if (nrow(geom) == 0) {
+        return(NULL)
+      }
+      as.numeric(sf::st_bbox(sf::st_geometry(geom)))
+    })
+
+    shiny::observeEvent(input$back_to_kenya, {
+      shiny::updateSelectInput(session, "county", selected = "All")
+      if (is.function(set_global_county)) {
+        set_global_county("All")
+      }
+    }, ignoreInit = TRUE)
+
     map_values <- shiny::reactive({
       values <- climate_monthly[date == selected_date()]
       shiny::validate(shiny::need(nrow(values) == 47L, "Climate coverage is incomplete for this month."))
@@ -230,7 +324,10 @@ climate_module_server <- function(
         type = type,
         condition_view = condition_view,
         selected_date = selected_date(),
-        climate_monthly = climate_monthly
+        climate_monthly = climate_monthly,
+        focus_bounds = focus_bounds(),
+        detail_sf = focus_detail()$sf,
+        detail_name = focus_detail()$name_col
       )
       selected <- if (identical(input$county, "All")) character() else input$county
 
