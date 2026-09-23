@@ -46,9 +46,8 @@ climate_module_ui <- function(id) {
         class = "kfp-context-note",
         "The commodity, unit, price type and currency filters above apply to the price analysis below; they do not change the climate maps."
       ),
-      # Drill-down controls, shown when a single county is focused. The detail
-      # units (sub-counties or wards) are reference boundaries only; climate
-      # values remain county-level estimates.
+      # Focused counties can show source ADM2 values. Ward lines are only
+      # reference boundaries because the climate feed has no ward estimates.
       shiny::uiOutput(ns("drill_controls"))
     ),
     shiny::uiOutput(ns("climate_summary")),
@@ -156,6 +155,27 @@ county_pcode_for_name <- function(county_name, county_lookup) {
   county_lookup[county_key == target_key, adm1_pcode][1L]
 }
 
+prepare_subcounty_map_values <- function(boundaries, values, county_code) {
+  polygons <- boundaries[
+    boundaries$adm1_pcode == county_code,
+  ]
+  observations <- values[adm1_pcode == county_code]
+  if (!nrow(polygons) ||
+      anyDuplicated(observations$adm2_pcode) ||
+      !setequal(polygons$adm2_pcode, observations$adm2_pcode)) {
+    stop("Subcounty polygons and climate observations do not match.")
+  }
+
+  row_index <- match(polygons$adm2_pcode, observations$adm2_pcode)
+  polygons$subcounty <- observations$subcounty[row_index]
+  for (field in c("rainfall_mm", "rainfall_z", "ndvi", "ndvi_z")) {
+    polygons[[field]] <- observations[[field]][row_index]
+  }
+  polygons$rainfall_condition <- climate_condition(polygons$rainfall_z)
+  polygons$ndvi_condition <- climate_condition(polygons$ndvi_z)
+  polygons
+}
+
 #' Climate dashboard server
 #'
 #' @param id Module identifier.
@@ -172,11 +192,13 @@ climate_module_server <- function(
   price_column,
   price_unit_label,
   global_county = NULL,
-  set_global_county = NULL
+  set_global_county = NULL,
+  reset_focus = NULL
 ) {
   shiny::moduleServer(id, function(input, output, session) {
     climate <- app_climate()
     climate_monthly <- climate$county_monthly
+    subcounty_monthly <- climate$subcounty_monthly
     county_lookup <- climate$county_lookup
     county_geometry <- prepare_climate_geometry(app_counties(), county_lookup)
 
@@ -221,6 +243,10 @@ climate_module_server <- function(
       county_lookup[adm1_pcode == input$county, county][1L]
     })
 
+    value_level <- shiny::reactive({
+      input$value_level %||% "subcounty"
+    })
+
     # Detail level for the focused county's internal boundaries.
     detail_level <- shiny::reactive({
       input$detail_level %||% "subcounty"
@@ -236,21 +262,47 @@ climate_module_server <- function(
       shiny::div(
         class = "kfp-drill-controls",
         shiny::div(
-          class = "kfp-toggle-control",
-          shiny::radioButtons(
-            session$ns("detail_level"),
-            "Show local boundaries",
-            choices = c(
-              "Sub-counties" = "subcounty",
-              "Wards" = "ward"
-            ),
-            selected = detail_level(),
-            inline = TRUE
+          class = "kfp-drill-options",
+          shiny::div(
+            class = "kfp-toggle-control",
+            shiny::radioButtons(
+              session$ns("value_level"),
+              "Map estimates",
+              choices = c(
+                "Sub-county values" = "subcounty",
+                "County average" = "county"
+              ),
+              selected = value_level(),
+              inline = TRUE
+            )
+          ),
+          shiny::div(
+            class = "kfp-toggle-control",
+            shiny::radioButtons(
+              session$ns("detail_level"),
+              "Show local boundaries",
+              choices = c(
+                "Sub-counties" = "subcounty",
+                "Wards" = "ward"
+              ),
+              selected = detail_level(),
+              inline = TRUE
+            )
           )
         ),
         shiny::tags$p(
           class = "kfp-panel-note",
-          "Local boundaries are shown for reference; rainfall and vegetation values are county-level estimates."
+          if (identical(value_level(), "subcounty")) {
+            paste(
+              "Maps show JMR sub-county estimates; cards and trends",
+              "summarise the county. Ward outlines have no ward values."
+            )
+          } else {
+            paste(
+              "Maps and cards show county averages. Local boundaries",
+              "are for reference only."
+            )
+          }
         ),
         shiny::actionButton(
           session$ns("back_to_kenya"),
@@ -276,6 +328,8 @@ climate_module_server <- function(
       if (identical(detail_level(), "ward")) {
         layer <- app_wards()
         name_col <- "NAME_3"
+      } else if (identical(value_level(), "subcounty")) {
+        return(list(sf = NULL, name_col = NULL))
       } else {
         layer <- app_subcounties()
         name_col <- "NAME_2"
@@ -291,13 +345,27 @@ climate_module_server <- function(
       list(sf = subset, name_col = name_col)
     })
 
+    subcounty_values <- shiny::reactive({
+      shiny::req(input$county, input$county != "All")
+      observations <- subcounty_monthly[date == selected_date()]
+      prepare_subcounty_map_values(
+        boundaries = app_cod_subcounties(),
+        values = observations,
+        county_code = input$county
+      )
+    })
+
     # Bounding box of the focused county, used to zoom both maps.
     focus_bounds <- shiny::reactive({
       shiny::req(input$county)
       if (identical(input$county, "All")) {
         return(NULL)
       }
-      geom <- county_geometry[county_geometry$adm1_pcode == input$county, ]
+      geom <- if (identical(value_level(), "subcounty")) {
+        subcounty_values()
+      } else {
+        county_geometry[county_geometry$adm1_pcode == input$county, ]
+      }
       if (nrow(geom) == 0) {
         return(NULL)
       }
@@ -330,25 +398,39 @@ climate_module_server <- function(
     })
 
     render_climate_map <- function(type) {
-      map_sf <- map_values()
+      local_values <- !identical(input$county, "All") &&
+        identical(value_level(), "subcounty")
+      map_sf <- if (local_values) subcounty_values() else map_values()
+      source_values <- if (local_values) {
+        subcounty_monthly
+      } else {
+        climate_monthly
+      }
       condition_view <- identical(input$map_measure, "condition")
       plot <- climate_map_plot(
         map_sf = map_sf,
         type = type,
         condition_view = condition_view,
         selected_date = selected_date(),
-        climate_monthly = climate_monthly,
+        climate_monthly = source_values,
         focus_bounds = focus_bounds(),
         detail_sf = focus_detail()$sf,
-        detail_name = focus_detail()$name_col
+        detail_name = focus_detail()$name_col,
+        area_level = if (local_values) "subcounty" else "county",
+        focus_label = selected_county_name()
       )
-      selected <- if (identical(input$county, "All")) character() else input$county
+      selected <- if (!local_values &&
+                      !identical(input$county, "All")) {
+        input$county
+      } else {
+        character()
+      }
 
       standard_girafe(
         plot,
         width_svg = 6.8,
         height_svg = 6.4,
-        selectable = TRUE,
+        selectable = !local_values,
         selected = selected
       )
     }
@@ -384,6 +466,14 @@ climate_module_server <- function(
           set_global_county(county_name)
         }
       }
+    }
+
+    if (is.function(reset_focus)) {
+      shiny::observeEvent(reset_focus(), {
+        if (!identical(input$county, "All")) {
+          shiny::updateSelectInput(session, "county", selected = "All")
+        }
+      }, ignoreInit = TRUE)
     }
 
     if (is.function(global_county)) {
@@ -588,7 +678,18 @@ climate_module_server <- function(
         shiny::tags$p(shiny::tags$strong("Rainfall: "), metadata$rainfall_source),
         shiny::tags$p(shiny::tags$strong("Vegetation: "), metadata$vegetation_source),
         shiny::tags$p(shiny::tags$strong("Geography: "), metadata$boundary_standard),
-        shiny::tags$p(shiny::tags$strong("County processing: "), metadata$aggregation),
+        shiny::tags$p(
+          shiny::tags$strong("Sub-county maps: "),
+          "JMR ADM2 monthly values joined to matching OCHA COD boundaries."
+        ),
+        shiny::tags$p(
+          shiny::tags$strong("County processing: "),
+          metadata$aggregation
+        ),
+        shiny::tags$p(
+          shiny::tags$strong("Ward outlines: "),
+          "Reference boundaries only; no ward climate estimates are shown."
+        ),
         shiny::tags$p(
           shiny::tags$strong("Coverage: "),
           format(metadata$data_start, "%b %Y"), " to ", format(metadata$data_end, "%b %Y")

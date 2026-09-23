@@ -121,13 +121,12 @@ market_price_map <- function(
   standard_girafe(plot, width_svg = 8, height_svg = 6.4)
 }
 
-# Build a county climate choropleth.
+# Build a county or sub-county climate choropleth.
 # - `focus_bounds` (optional numeric xmin/ymin/xmax/ymax) zooms the map to a
 #   selected county while keeping the national fill for context.
 # - `detail_sf` (optional sf) draws uncoloured internal unit outlines (sub-
 #   counties or wards) inside the focused county. These are reference only;
-#   the climate values remain county-level estimates, so detail units are not
-#   coloured by value. `detail_name` is the label column used on hover.
+#   `detail_name` is the label column used on hover.
 climate_map_plot <- function(
   map_sf,
   type,
@@ -137,12 +136,31 @@ climate_map_plot <- function(
   focus_bounds = NULL,
   detail_sf = NULL,
   detail_name = NULL,
-  focus_label = NULL
+  focus_label = NULL,
+  area_level = "county"
 ) {
+  subcounty_view <- identical(area_level, "subcounty")
+  map_sf$map_id <- if (subcounty_view) {
+    map_sf$adm2_pcode
+  } else {
+    map_sf$adm1_pcode
+  }
+  area_label <- if (subcounty_view) {
+    paste0(
+      "Sub-county: ", map_sf$subcounty,
+      "\nCounty: ", focus_label
+    )
+  } else {
+    paste0("County: ", map_sf$county)
+  }
   if (identical(type, "rainfall")) {
-    map_sf$display_value <- if (condition_view) map_sf$rainfall_condition else map_sf$rainfall_mm
+    map_sf$display_value <- if (condition_view) {
+      map_sf$rainfall_condition
+    } else {
+      map_sf$rainfall_mm
+    }
     map_sf$map_tooltip <- paste0(
-      "County: ", map_sf$county,
+      area_label,
       "\nMonth: ", format(selected_date, "%B %Y"),
       "\nAverage rainfall: ", format_number(map_sf$rainfall_mm, 1), " mm/dekad",
       "\nStandardised condition: ", format_number(map_sf$rainfall_z, 2),
@@ -150,9 +168,13 @@ climate_map_plot <- function(
     )
     legend_title <- if (condition_view) "Rainfall condition" else "Rainfall\n(mm/dekad)"
   } else {
-    map_sf$display_value <- if (condition_view) map_sf$ndvi_condition else map_sf$ndvi
+    map_sf$display_value <- if (condition_view) {
+      map_sf$ndvi_condition
+    } else {
+      map_sf$ndvi
+    }
     map_sf$map_tooltip <- paste0(
-      "County: ", map_sf$county,
+      area_label,
       "\nMonth: ", format(selected_date, "%B %Y"),
       "\nAverage NDVI: ", format_number(map_sf$ndvi, 3),
       "\nStandardised condition: ", format_number(map_sf$ndvi_z, 2),
@@ -166,7 +188,7 @@ climate_map_plot <- function(
       ggplot2::aes(
         fill = display_value,
         tooltip = map_tooltip,
-        data_id = adm1_pcode
+        data_id = map_id
       ),
       colour = "#ffffff",
       linewidth = 0.35
@@ -176,11 +198,15 @@ climate_map_plot <- function(
   # values, so they are drawn as uncoloured boundaries with a name tooltip.
   if (!is.null(detail_sf) && nrow(detail_sf) > 0 && !is.null(detail_name)) {
     detail_sf <- sf::st_set_geometry(detail_sf, attr(detail_sf, "sf_column"))
+    estimate_level <- if (subcounty_view) "sub-county" else "county"
     detail_sf$detail_tooltip <- paste0(
       detail_sf[[detail_name]],
-      "\n(reference boundary - climate values are county-level estimates)"
+      "\n(reference boundary - climate values are ",
+      estimate_level, " estimates)"
     )
-    detail_sf$detail_id <- as.character(seq_len(nrow(detail_sf)))
+    detail_sf$detail_id <- paste0(
+      "boundary-", seq_len(nrow(detail_sf))
+    )
     plot <- plot +
       ggiraph::geom_sf_interactive(
         data = detail_sf,

@@ -14,6 +14,7 @@ app_climate <- function() {
   if (!exists("kenya_climate", envir = .app_data_cache, inherits = FALSE)) {
     utils::data("kenya_climate", package = "kenyaFoodPrices", envir = .app_data_cache)
     data.table::setDT(.app_data_cache$kenya_climate$county_monthly)
+    data.table::setDT(.app_data_cache$kenya_climate$subcounty_monthly)
     data.table::setDT(.app_data_cache$kenya_climate$county_lookup)
     data.table::setDT(.app_data_cache$kenya_climate$model_details)
   }
@@ -95,4 +96,18 @@ app_wards <- function() {
   }
 
   .app_data_cache$kenya_wards
+}
+
+# COD ADM2 polygons use the same P-codes as the JMR subcounty records.
+app_cod_subcounties <- function() {
+  if (!exists("kenya_subcounties_cod", envir = .app_data_cache,
+              inherits = FALSE)) {
+    utils::data(
+      "kenya_subcounties_cod",
+      package = "kenyaFoodPrices",
+      envir = .app_data_cache
+    )
+  }
+
+  .app_data_cache$kenya_subcounties_cod
 }

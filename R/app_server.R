@@ -107,9 +107,20 @@ datatable_compact <- function(data, page_length = 8) {
   )
 }
 
+valid_price_date_range <- function(dates) {
+  length(dates) == 2L &&
+    inherits(dates, "Date") &&
+    !anyNA(dates) &&
+    dates[1L] <= dates[2L]
+}
+
 app_server <- function(input, output, session) {
   food_prices <- app_food_prices()
 
+  selected_price_dates <- reactive({
+    shiny::req(valid_price_date_range(input$page1_date))
+    input$page1_date
+  })
 
   price_column <- reactive({
     if (identical(input$Currency, "usdprice")) {
@@ -192,7 +203,11 @@ app_server <- function(input, output, session) {
     )
   })
 
+  # Recreate the range input on reset after its dependent controls settle.
+  reset_date_input <- shiny::reactiveVal(0L)
+
   output$page_year_ui <- renderUI({
+    reset_date_input()
     req(input$category, input$commodity, input$unit, input$pricetype)
 
     year_filtered <- food_prices[
@@ -221,12 +236,13 @@ app_server <- function(input, output, session) {
      input$unit, input$pricetype,
      input$page1_date)
 
+    price_dates <- selected_price_dates()
     county_filtered <- food_prices[
       category == input$category &
         commodity == input$commodity &
         unit == input$unit &
         pricetype == input$pricetype &
-        data.table::between(date, input$page1_date[1], input$page1_date[2]) &
+        data.table::between(date, price_dates[1L], price_dates[2L]) &
         !is.na(county)
     ]
 
@@ -246,12 +262,13 @@ app_server <- function(input, output, session) {
         input$page1_date,
         input$page1_county)
 
+    price_dates <- selected_price_dates()
     market_filtered <- food_prices[
       category == input$category &
         commodity == input$commodity &
         unit == input$unit &
         pricetype == input$pricetype &
-        data.table::between(date, input$page1_date[1], input$page1_date[2])
+        data.table::between(date, price_dates[1L], price_dates[2L])
     ]
 
     if (!identical(input$page1_county, "All")) {
@@ -277,12 +294,13 @@ app_server <- function(input, output, session) {
       input$page1_date
     )
 
+    price_dates <- selected_price_dates()
     food_prices[
       category %in% input$category &
         commodity %in% input$commodity &
         unit %in% input$unit &
         pricetype %in% input$pricetype &
-        data.table::between(date, input$page1_date[1], input$page1_date[2])
+        data.table::between(date, price_dates[1L], price_dates[2L])
     ]
   })
 
@@ -318,8 +336,8 @@ app_server <- function(input, output, session) {
       input$page1_market
     }
     date_label <- paste(
-      format(input$page1_date[1], "%b %Y"),
-      format(input$page1_date[2], "%b %Y"),
+      format(selected_price_dates()[1L], "%b %Y"),
+      format(selected_price_dates()[2L], "%b %Y"),
       sep = " - "
     )
 
@@ -341,14 +359,7 @@ app_server <- function(input, output, session) {
       updateSelectInput(session, "category", selected = first_category)
       updateSelectInput(session, "Currency", selected = "price")
 
-      if (!is.null(input$page1_date)) {
-        shiny::updateDateRangeInput(
-          session,
-          "page1_date",
-          start = min(food_prices$date, na.rm = TRUE),
-          end = max(food_prices$date, na.rm = TRUE)
-        )
-      }
+      reset_date_input(reset_date_input() + 1L)
       if (!is.null(input$page1_county)) {
         updateSelectInput(session, "page1_county", selected = "All")
       }
@@ -372,7 +383,8 @@ app_server <- function(input, output, session) {
     global_county = reactive(input$page1_county %||% "All"),
     set_global_county = function(county) {
       updateSelectInput(session, "page1_county", selected = county)
-    }
+    },
+    reset_focus = reactive(input$reset_filters)
   )
 
   price_aggregation <- reactive({
@@ -1165,8 +1177,8 @@ app_server <- function(input, output, session) {
       currency = currency_label(),
       calculation = input$calculation %||% "balanced_median",
       period_label = paste(
-        format(input$page1_date[1], "%b %Y"),
-        format(input$page1_date[2], "%b %Y"),
+        format(selected_price_dates()[1L], "%b %Y"),
+        format(selected_price_dates()[2L], "%b %Y"),
         sep = " - "
       )
     )
@@ -1231,11 +1243,12 @@ app_server <- function(input, output, session) {
 
   output$compare_commodities_ui <- renderUI({
     req(input$category, input$unit, input$pricetype, input$page1_date)
+    price_dates <- selected_price_dates()
     dt <- food_prices[
       category == input$category &
         unit == input$unit &
         pricetype == input$pricetype &
-        data.table::between(date, input$page1_date[1], input$page1_date[2])
+        data.table::between(date, price_dates[1L], price_dates[2L])
     ]
     shiny::validate(shiny::need(nrow(dt) > 0, "No commodities are available for this selection."))
 
@@ -1310,14 +1323,16 @@ app_server <- function(input, output, session) {
   })
 
   output$commodity_compare_plot <- ggiraph::renderGirafe({
-    req(input$compare_commodities, input$category, input$unit, input$pricetype, input$page1_date)
+    req(input$compare_commodities, input$category, input$unit,
+        input$pricetype, input$page1_date)
     price_val <- price_column()
+    price_dates <- selected_price_dates()
     dt <- food_prices[
       category == input$category &
         commodity %in% input$compare_commodities &
         unit == input$unit &
         pricetype == input$pricetype &
-        data.table::between(date, input$page1_date[1], input$page1_date[2])
+        data.table::between(date, price_dates[1L], price_dates[2L])
     ]
     shiny::validate(shiny::need(nrow(dt) > 1, "Select commodities with available data for the current unit and price type."))
 
