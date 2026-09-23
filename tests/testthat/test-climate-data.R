@@ -24,3 +24,14 @@ test_that("all existing county polygons match a climate P-code", {
   expect_equal(data.table::uniqueN(geometry$adm1_pcode), 47)
   expect_equal(sf::st_crs(geometry)$epsg, 4326)
 })
+
+
+test_that("county names resolve to their own climate P-codes", {
+  lookup <- app_climate()$county_lookup
+
+  expect_equal(county_pcode_for_name("All", lookup), "All")
+  expect_equal(county_pcode_for_name("Mombasa", lookup), "KE001")
+  expect_equal(county_pcode_for_name("Garissa", lookup), "KE007")
+  expect_equal(county_pcode_for_name("Nairobi", lookup),
+               county_pcode_for_name("Nairobi City", lookup))
+})
