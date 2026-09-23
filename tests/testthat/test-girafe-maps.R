@@ -62,6 +62,7 @@ test_that("market map renders as a girafe widget", {
     longitude = 36.8172,
     avg_price = 100,
     latest_date = as.Date("2026-01-01"),
+    covered_months = 24L,
     records = 12L
   )
 

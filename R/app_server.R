@@ -15,7 +15,7 @@
 #' @keywords internal
 #' @noRd
 utils::globalVariables(c(
-  "Average Price", ":=", "change", "consecutive_month", "estimate",
+  ":=", "change", "consecutive_month", "estimate",
   "percent_change", "previous_estimate"
 ))
 
@@ -84,8 +84,11 @@ kpi_card <- function(label, value, note = NULL, status = "") {
   )
 }
 
+# Compact DataTable. When every row fits on one page, pagination and the
+# page-length selector are hidden so the panel shows only useful controls.
 datatable_compact <- function(data, page_length = 8) {
   page_options <- sort(unique(c(as.integer(page_length), 10L, 25L)))
+  single_page <- nrow(data) <= page_length
 
   DT::datatable(
     data,
@@ -96,7 +99,8 @@ datatable_compact <- function(data, page_length = 8) {
         c(page_options, -1L),
         c(as.character(page_options), "All")
       ),
-      dom = "ltip",
+      dom = if (single_page) "t" else "ltip",
+      paging = !single_page,
       autoWidth = TRUE,
       scrollX = TRUE
     )
@@ -130,6 +134,16 @@ app_server <- function(input, output, session) {
 
   calculation_label <- reactive({
     price_calculation_label(input$calculation %||% "balanced_median")
+  })
+
+  # Short estimator name for axis titles and table headings.
+  calculation_short <- reactive({
+    price_calculation_short_label(input$calculation %||% "balanced_median")
+  })
+
+  # Unit denominator for headings, for example "KES per kg".
+  unit_denominator <- reactive({
+    paste0("(", price_unit_label(), ")")
   })
 
   output$category_ui <- renderUI({
@@ -364,7 +378,9 @@ app_server <- function(input, output, session) {
   price_aggregation <- reactive({
     dt <- filtered_data()
     req(nrow(dt) > 0)
-    aggregate_price_data(dt, price_column(), input$calculation %||% "balanced_median")
+    aggregate_price_data(dt, 
+    price_column(), 
+    input$calculation %||% "balanced_median")
   })
 
   monthly_summary <- reactive({
@@ -464,7 +480,8 @@ app_server <- function(input, output, session) {
 
     monthly[, tooltip := paste0(
       "Month: ", format(year_month_date, "%b %Y"),
-      "<br>Average price: ", format_number(mean_price, 2), " ", price_unit_label(),
+      "<br>", calculation_short(), ": ",
+      format_number(mean_price, 2), " ", price_unit_label(),
       "<br>", calculation_label(),
       "<br>Coverage: ", price_coverage_label(observations, markets, counties)
     )]
@@ -487,7 +504,7 @@ app_server <- function(input, output, session) {
       ggplot2::labs(
         title = "Monthly price trend",
         x = "Month",
-        y = paste("Average price", price_unit_label())
+        y = paste(calculation_short(), unit_denominator())
       ) +
       ggplot2::scale_x_date(date_labels = "%Y", date_breaks = "2 years") +
       ggplot2::theme_minimal(base_size = 12) +
@@ -506,11 +523,12 @@ app_server <- function(input, output, session) {
 
     monthly[, pct_change := percent_change]
 
+    estimate_heading <- paste0(calculation_short(), "\n", unit_denominator())
     display <- monthly[order(-year_month_date)][1:min(.N, 12)][
       ,
       .(
         Month = format(year_month_date, "%b %Y"),
-        `Average Price` = format_number(mean_price, 2),
+        Estimate = format_number(mean_price, 2),
         Change = vapply(change, format_change, character(1),
          unit_label = price_unit_label()),
         `% Change` = vapply(pct_change, format_percent, character(1)),
@@ -520,6 +538,7 @@ app_server <- function(input, output, session) {
            character(1))
       )
     ]
+    data.table::setnames(display, "Estimate", estimate_heading)
 
     datatable_compact(display, page_length = 6)
   })
@@ -533,27 +552,29 @@ app_server <- function(input, output, session) {
         "date range, or reset the county filter."
       )
     ))
+    estimate_heading <- paste0(calculation_short(), "\n", unit_denominator())
     display <- monthly[
       ,
       .(
-        `Average Price` = if (
+        Estimate = if (
           identical(input$calculation, "record_weighted_mean")
         ) {
           stats::weighted.mean(estimate, records)
         } else {
           stats::median(estimate)
         },
-        `Latest Date` = max(year_month_date),
+        `Latest Month` = max(year_month_date),
         Records = sum(records),
         Markets = max(markets),
         `Covered Months` = .N
       ),
       by = .(County = county)
-    ][order(-`Average Price`)][1:min(.N, 10)]
+    ][order(-Estimate)][1:min(.N, 10)]
 
-    display[, `Average Price` := vapply(`Average Price`,
+    display[, Estimate := vapply(Estimate,
      format_number, character(1), digits = 2)]
-    display[, `Latest Date` := as.character(`Latest Date`)]
+    display[, `Latest Month` := format(`Latest Month`, "%b %Y")]
+    data.table::setnames(display, "Estimate", estimate_heading)
     datatable_compact(display)
   })
 
@@ -563,26 +584,28 @@ app_server <- function(input, output, session) {
       nrow(monthly) > 0,
       "No market data available. Try all markets, broaden the date range, or reset the market filter."
     ))
+    estimate_heading <- paste0(calculation_short(), "\n", unit_denominator())
     display <- monthly[
       ,
       .(
         County = county[which.max(year_month_date)],
-        `Average Price` = if (
+        Estimate = if (
           identical(input$calculation, "record_weighted_mean")
         ) {
           stats::weighted.mean(estimate, records)
         } else {
           stats::median(estimate)
         },
-        `Latest Date` = max(year_month_date),
+        `Latest Month` = max(year_month_date),
         Records = sum(records),
         `Covered Months` = .N
       ),
       by = .(Market = market)
-    ][order(-`Average Price`)][1:min(.N, 10)]
+    ][order(-Estimate)][1:min(.N, 10)]
 
-    display[, `Average Price` := vapply(`Average Price`, format_number, character(1), digits = 2)]
-    display[, `Latest Date` := as.character(`Latest Date`)]
+    display[, Estimate := vapply(Estimate, format_number, character(1), digits = 2)]
+    display[, `Latest Month` := format(`Latest Month`, "%b %Y")]
+    data.table::setnames(display, "Estimate", estimate_heading)
     datatable_compact(display)
   })
 
@@ -652,7 +675,7 @@ app_server <- function(input, output, session) {
     location <- if (!identical(input$page1_county, "All")) {
       paste0(input$page1_county, " county")
     } else {
-      "Kenya"
+      "Available markets in Kenya"
     }
 
     if (!identical(input$page1_market, "All")) {
@@ -739,7 +762,8 @@ app_server <- function(input, output, session) {
       paste0(format(period, "%b %Y"), " - No observations"),
       paste0(
         format(period, "%b %Y"),
-        "<br>Average price: ", format_number(mean_price, 2), " ", price_unit_label(),
+        "<br>Mean recorded price: ",
+        format_number(mean_price, 2), " ", price_unit_label(),
         "<br>Records: ", format_number(observations),
         "<br>Counties: ", format_number(counties),
         "<br>Markets: ", format_number(markets)
@@ -816,7 +840,7 @@ app_server <- function(input, output, session) {
         } else {
           "Month"
         },
-        y = paste("Average price", price_unit_label())
+        y = paste("Mean recorded price", unit_denominator())
       ) +
       ggplot2::scale_x_date(date_labels = "%Y", date_breaks = "2 years") +
       ggplot2::theme_minimal(base_size = 12) +
@@ -884,7 +908,7 @@ app_server <- function(input, output, session) {
     annual[, year_id := as.character(calendar_year)]
     annual[, hover_text := paste0(
       "Year: ", calendar_year,
-      "<br>Average price: ", format_number(mean_price, 2),
+      "<br>Mean recorded price: ", format_number(mean_price, 2),
       " ", price_unit_label(),
       "<br>Range: ", format_number(min_price, 2), " - ",
       format_number(max_price, 2),
@@ -910,7 +934,7 @@ app_server <- function(input, output, session) {
       ggplot2::labs(
         title = paste(input$commodity, input$pricetype, "annual price range"),
         x = "Year",
-        y = paste("Average price", price_unit_label())
+        y = paste("Mean recorded price", unit_denominator())
       ) +
       ggplot2::scale_x_date(date_labels = "%Y", date_breaks = "2 years") +
       ggplot2::theme_minimal(base_size = 12) +
@@ -1055,10 +1079,10 @@ app_server <- function(input, output, session) {
         chart_title <- paste("Markets in", input$page1_county)
       } else if (data.table::uniqueN(dt$county) > 1) {
         grouping <- "county"
-        chart_title <- "Average price by county"
+        chart_title <- "Mean recorded price by county"
       } else if (data.table::uniqueN(dt$market) > 1) {
         grouping <- "market"
-        chart_title <- "Average price by market"
+        chart_title <- "Mean recorded price by market"
       } else {
         shiny::validate(shiny::need(FALSE, paste("Only",
         unique(dt$county)[1],
@@ -1077,7 +1101,7 @@ app_server <- function(input, output, session) {
 
     comparison[, hover_text := paste0(
       location,
-      "<br>Average price: ",
+      "<br>Mean recorded price: ",
       format_number(mean_price, 2), " ",
        price_unit_label(),
       "<br>Records: ", format_number(records)
@@ -1098,7 +1122,7 @@ app_server <- function(input, output, session) {
       ) +
       ggplot2::labs(
         title = chart_title,
-        x = paste("Average price", price_unit_label()),
+        x = paste("Mean recorded price", unit_denominator()),
         y = NULL
       ) +
       ggplot2::theme_minimal(base_size = 12) +
@@ -1138,16 +1162,50 @@ app_server <- function(input, output, session) {
       map_df = map_data(),
       counties = app_counties(),
       price_unit = price_unit_label(),
-      currency = currency_label()
+      currency = currency_label(),
+      calculation = input$calculation %||% "balanced_median",
+      period_label = paste(
+        format(input$page1_date[1], "%b %Y"),
+        format(input$page1_date[2], "%b %Y"),
+        sep = " - "
+      )
+    )
+  })
+
+  output$map_market_title <- shiny::renderText({
+    total <- nrow(map_data())
+    shown <- min(total, 15L)
+    paste0(
+      shown, " highest market price estimates (of ", total,
+      " mapped markets, selected period)"
+    )
+  })
+
+  output$map_market_note <- shiny::renderText({
+    paste0(
+      "Colour and estimates summarise the selected period. ",
+      "Markets may have been observed in different months, so this is not ",
+      "a same-month comparison."
     )
   })
 
   output$map_market_table <- DT::renderDT({
+    estimate_heading <- paste0(calculation_short(), "\n", unit_denominator())
     display <- copy(map_data())[1:min(.N, 15)]
-    setnames(display, c("market", "county", "avg_price", "latest_date", "records"), c("Market", "County", "Average Price", "Latest Date", "Records"), skip_absent = TRUE)
-    display[, `Average Price` := vapply(`Average Price`, format_number, character(1), digits = 2)]
-    display[, `Latest Date` := as.character(`Latest Date`)]
-    display <- display[, .(Market, County, `Average Price`, `Latest Date`, Records)]
+    display <- display[
+      ,
+      .(
+        Market = market,
+        County = county,
+        Estimate = avg_price,
+        `Latest Month` = latest_date,
+        `Covered Months` = covered_months,
+        Records = records
+      )
+    ]
+    display[, Estimate := vapply(Estimate, format_number, character(1), digits = 2)]
+    display[, `Latest Month` := format(`Latest Month`, "%b %Y")]
+    data.table::setnames(display, "Estimate", estimate_heading)
     datatable_compact(display, page_length = 6)
   })
 
@@ -1210,7 +1268,8 @@ app_server <- function(input, output, session) {
     ][order(year_month_date)]
     compare[, tooltip := paste0(
       county, "<br>", format(year_month_date, "%b %Y"),
-      "<br>Average price: ", format_number(mean_price, 2), " ", price_unit_label()
+      "<br>Mean recorded price: ", format_number(mean_price, 2),
+      " ", price_unit_label()
     )]
     compare[, county_id := as.character(county)]
     compare[, county_point_id := paste(county, year_month_date, sep = "|")]
@@ -1235,7 +1294,7 @@ app_server <- function(input, output, session) {
       ggplot2::labs(
         title = "County price comparison",
         x = "Month",
-        y = paste("Average price", price_unit_label()),
+        y = paste("Mean recorded price", unit_denominator()),
         colour = "County"
       ) +
       ggplot2::scale_x_date(date_labels = "%Y", date_breaks = "2 years") +
@@ -1269,7 +1328,8 @@ app_server <- function(input, output, session) {
     ][order(year_month_date)]
     compare[, tooltip := paste0(
       commodity, "<br>", format(year_month_date, "%b %Y"),
-      "<br>Average price: ", format_number(mean_price, 2), " ", price_unit_label()
+      "<br>Mean recorded price: ", format_number(mean_price, 2),
+      " ", price_unit_label()
     )]
     compare[, commodity_id := as.character(commodity)]
     compare[, commodity_point_id := paste(commodity, year_month_date, sep = "|")]
@@ -1294,7 +1354,7 @@ app_server <- function(input, output, session) {
       ggplot2::labs(
         title = "Commodity price comparison",
         x = "Month",
-        y = paste("Average price", price_unit_label()),
+        y = paste("Mean recorded price", unit_denominator()),
         colour = "Commodity"
       ) +
       ggplot2::scale_x_date(date_labels = "%Y", date_breaks = "2 years") +
