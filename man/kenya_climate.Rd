@@ -5,10 +5,13 @@
 \alias{kenya_climate}
 \title{Harmonised WFP rainfall and vegetation indicators for Kenya}
 \format{
-A list with four elements:
+A list with five elements:
 \describe{
   \item{county_monthly}{A `data.table` with one row per county and month,
   containing physical and standardised rainfall and NDVI indicators.}
+  \item{subcounty_monthly}{A `data.table` with one row per COD ADM2
+  subcounty and month, containing source rainfall and NDVI values and
+  their standardised conditions.}
   \item{county_lookup}{A `data.table` mapping current ADM1 P-codes to
   county names.}
   \item{model_details}{A `data.table` documenting JMR climate indicator

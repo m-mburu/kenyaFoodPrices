@@ -75,3 +75,32 @@ test_that("market map renders as a girafe widget", {
 
   expect_s3_class(widget, "girafe")
 })
+
+test_that("focused maps use ADM2 identifiers and source measurements", {
+  climate <- app_climate()
+  observations <- climate$subcounty_monthly[
+    date == as.Date("2026-07-01")
+  ]
+  values <- prepare_subcounty_map_values(
+    app_cod_subcounties(),
+    observations,
+    "KE001"
+  )
+  map <- climate_map_plot(
+    values,
+    type = "rainfall",
+    condition_view = FALSE,
+    selected_date = as.Date("2026-07-01"),
+    climate_monthly = climate$subcounty_monthly,
+    focus_label = "Mombasa",
+    area_level = "subcounty"
+  )
+
+  expect_setequal(map$data$map_id, values$adm2_pcode)
+  expect_equal(map$data$display_value, values$rainfall_mm)
+  expect_true(all(grepl(
+    "Sub-county:.*County: Mombasa",
+    map$data$map_tooltip
+  )))
+  expect_true(data.table::uniqueN(map$data$display_value) > 1L)
+})

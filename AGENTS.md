@@ -348,6 +348,17 @@ not assign all 9-17 seconds to server CPU or prove a particular hosting limit.
   first-load and cached county-focus latency separately; confirm that a focus
   change does not resend the full national geometry.
 
+### Current sub-county value implementation
+
+As of 23 September 2026, the focused Climate maps can colour COD ADM2
+sub-counties using the JMR monthly ADM2 rainfall and NDVI observations. The
+county option uses the existing unweighted county averages. KPI cards and
+price/climate trends remain county summaries in both map modes. GADM ward
+outlines remain reference geometry: the JMR feed does not contain distinct ward
+values, and county or ADM2 averages must not be copied into wards and described
+as ward estimates. The earlier county-only recommendations above describe the
+reviewed baseline; they do not override this implemented source-level view.
+
 ### Follow-up measurement and acceptance criteria
 
 - Original symptom: Climate filtering feels slow on shinyapps.io.

@@ -867,3 +867,20 @@ body {
     font-size: 12px;
   }
 }
+
+/* Keep focused climate map controls compact on wide screens. */
+.kfp-drill-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 28px;
+}
+
+.kfp-drill-options .kfp-toggle-control {
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .kfp-drill-options {
+    display: block;
+  }
+}

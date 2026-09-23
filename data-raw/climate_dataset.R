@@ -90,6 +90,19 @@ build_kenya_climate <- function(work_dir = tempfile("kenya-climate-")) {
 
   climate_adm2 <- prepare_jmr_climate(jmr_data, pcodes)
   county_monthly <- aggregate_climate_to_county(climate_adm2)
+  subcounty_monthly <- climate_adm2[
+    ,
+    .(
+      date,
+      adm1_pcode,
+      adm2_pcode,
+      subcounty = adm2_name,
+      rainfall_mm,
+      rainfall_z,
+      ndvi,
+      ndvi_z
+    )
+  ]
   county_lookup <- unique(
     data.table::as.data.table(pcodes)[, .(adm1_pcode, county = adm1_name)]
   )
@@ -101,6 +114,7 @@ build_kenya_climate <- function(work_dir = tempfile("kenya-climate-")) {
 
   list(
     county_monthly = county_monthly,
+    subcounty_monthly = subcounty_monthly,
     county_lookup = county_lookup,
     model_details = model_details[
       indicator %chin% c("Drought - NDVI", "Drought - rainfall")
