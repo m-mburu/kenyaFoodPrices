@@ -59,6 +59,31 @@ ke_food_prices[commodity %in% all_maize, commodity := "Maize"]
 ke_food_prices[commodity == "Beans (dry)", commodity := "Beans"]
 
 ke_food_prices[grepl("Beans", commodity), table(commodity)]
+
+# Drop stale commodities: keep only those whose most recent record is within
+# the last year (relative to the date the preparation script is run). This
+# removes items such as Bread and the fuels, which were last recorded in 2020
+# and would otherwise appear current in the dashboard.
+staleness_cutoff <- Sys.Date() - 365
+
+stale_commodities <- ke_food_prices[
+  ,
+  .(last_recorded = max(date, na.rm = TRUE)),
+  by = commodity
+][
+  last_recorded < staleness_cutoff
+]
+
+message(
+  "Removing ", nrow(stale_commodities),
+  " commodities not recorded since ", staleness_cutoff, ": ",
+  paste(sort(stale_commodities$commodity), collapse = ", ")
+)
+
+ke_food_prices <- ke_food_prices[
+  !commodity %in% stale_commodities$commodity
+]
+
 ke_food_prices <- create_unique_ids(ke_food_prices)
 
 
