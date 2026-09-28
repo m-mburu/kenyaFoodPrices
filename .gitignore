@@ -60,3 +60,8 @@ README.html
 
 # Raw GADM download cache (about 46 MB); prepared layers live in data/
 data-raw/gadm/
+
+# Local Overview redesign advice for an LLM
+/dev/OVERVIEW_REDESIGN_BRIEF.md
+/dev/TRENDS_REDESIGN_BRIEF.md
+/dev/JAVASCRIPT_ENHANCEMENT_BRIEF.md

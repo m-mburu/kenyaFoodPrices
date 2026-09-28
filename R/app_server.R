@@ -15,8 +15,10 @@
 #' @keywords internal
 #' @noRd
 utils::globalVariables(c(
-  ":=", "change", "consecutive_month", "estimate",
-  "percent_change", "previous_estimate"
+  ":=", "change", "consecutive_month", "covered_months",
+  "display_y", "estimate", "label", "Latest observation month",
+  "percent_change",
+  "period_id", "previous_estimate", "segment", "smooth_segment"
 ))
 
 format_number <- function(x, digits = 0) {
@@ -75,6 +77,18 @@ format_percent <- function(x) {
   )
 }
 
+format_price_comparison <- function(percent_change) {
+  if (length(percent_change) == 0L ||
+      !is.finite(percent_change)) {
+    return("Not available")
+  }
+  if (percent_change == 0) {
+    return("Unchanged")
+  }
+  direction <- if (percent_change > 0) "higher" else "lower"
+  paste0(format_number(abs(100 * percent_change), 1), "% ", direction)
+}
+
 kpi_card <- function(label, value, note = NULL, status = "") {
   div(
     class = paste("kfp-kpi", status),
@@ -86,7 +100,7 @@ kpi_card <- function(label, value, note = NULL, status = "") {
 
 # Compact DataTable. When every row fits on one page, pagination and the
 # page-length selector are hidden so the panel shows only useful controls.
-datatable_compact <- function(data, page_length = 8) {
+datatable_compact <- function(data, page_length = 8, scroll_x = TRUE) {
   page_options <- sort(unique(c(as.integer(page_length), 10L, 25L)))
   single_page <- nrow(data) <= page_length
 
@@ -102,7 +116,7 @@ datatable_compact <- function(data, page_length = 8) {
       dom = if (single_page) "t" else "ltip",
       paging = !single_page,
       autoWidth = TRUE,
-      scrollX = TRUE
+      scrollX = scroll_x
     )
   )
 }
@@ -112,6 +126,81 @@ valid_price_date_range <- function(dates) {
     inherits(dates, "Date") &&
     !anyNA(dates) &&
     dates[1L] <= dates[2L]
+}
+
+trend_period_label <- function(
+  period,
+  quarterly = FALSE,
+  covered_months = NA_integer_
+) {
+  period <- as.Date(period)
+  covered_months <- rep_len(covered_months, length(period))
+
+  vapply(
+    seq_along(period),
+    function(index) {
+      if (!isTRUE(quarterly)) {
+        return(format(period[index], "%b %Y"))
+      }
+
+      quarter <- (as.integer(format(period[index], "%m")) - 1L) %/% 3L + 1L
+      label <- paste0("Q", quarter, " ", format(period[index], "%Y"))
+      if (is.na(covered_months[index])) {
+        return(label)
+      }
+      paste0(label, " (", covered_months[index], " months)")
+    },
+    character(1)
+  )
+}
+
+trend_period_choices <- function(trend, quarterly = FALSE) {
+  trend <- data.table::copy(trend)
+  trend <- trend[is.finite(mean_price)][order(-period)]
+  if (!nrow(trend)) {
+    return(stats::setNames(character(), character()))
+  }
+
+  trend[, period_id := as.character(period)]
+  stats::setNames(
+    trend$period_id,
+    trend_period_label(trend$period, quarterly, trend$covered_months)
+  )
+}
+
+trend_percent_change <- function(reference_value, comparison_value) {
+  if (!is.finite(reference_value) || !is.finite(comparison_value) ||
+      reference_value == 0) {
+    return(NA_real_)
+  }
+
+  (comparison_value - reference_value) / reference_value
+}
+
+# A quarterly point is the mean of available monthly selected estimates.
+# Empty quarters remain missing; do not replace them with zero.
+quarterly_trend_data <- function(monthly) {
+  monthly <- data.table::copy(monthly)
+  monthly[, period := as.Date(sprintf(
+    "%s-%02d-01",
+    format(year_month_date, "%Y"),
+    ((as.integer(format(year_month_date, "%m")) - 1L) %/% 3L) *
+      3L + 1L
+  ))]
+  monthly[
+    ,
+    .(
+      mean_price = if (all(is.na(mean_price))) NA_real_ else
+        mean(mean_price, na.rm = TRUE),
+      observations = sum(observations, na.rm = TRUE),
+      counties = if (all(is.na(counties))) NA_integer_ else
+        max(counties, na.rm = TRUE),
+      markets = if (all(is.na(markets))) NA_integer_ else
+        max(markets, na.rm = TRUE),
+      covered_months = sum(is.finite(mean_price))
+    ),
+    by = period
+  ]
 }
 
 app_server <- function(input, output, session) {
@@ -345,11 +434,18 @@ app_server <- function(input, output, session) {
       class = "kfp-filter-context",
       shiny::tags$span(class = "kfp-filter-chip", input$commodity),
       shiny::tags$span(class = "kfp-filter-chip", input$pricetype),
-      shiny::tags$span(class = "kfp-filter-chip", input$unit),
+      shiny::tags$span(class = "kfp-filter-chip", price_unit_label()),
       shiny::tags$span(class = "kfp-filter-chip", county_label),
       shiny::tags$span(class = "kfp-filter-chip", market_label),
       shiny::tags$span(class = "kfp-filter-chip", date_label),
-      shiny::tags$span(class = "kfp-filter-chip", calculation_label())
+      shiny::tags$span(
+        class = "kfp-filter-chip",
+        if (identical(input$calculation, "record_weighted_mean")) {
+          "Record-weighted mean"
+        } else {
+          "Balanced median"
+        }
+      )
     )
   })
 
@@ -405,127 +501,182 @@ app_server <- function(input, output, session) {
 
   output$summary_kpis <- renderUI({
     dt <- filtered_data()
-    req(nrow(dt) > 0)
-    price_val <- price_column()
-    unit_label <- price_unit_label()
+    shiny::validate(shiny::need(
+      nrow(dt) > 0,
+      "No price records match these filters. Broaden the selection or reset."
+    ))
     monthly <- monthly_summary()
-
     latest_row <- monthly[.N]
-    previous_row <- if (nrow(monthly) > 1) monthly[.N - 1] else NULL
-    current_price <- latest_row$mean_price
-    previous_price <- if (!is.null(previous_row)) {
-      previous_row$mean_price
-    } else {
-      NA_real_
-    }
-    mom_change <- current_price - previous_price
-    mom_pct <- if (!is.na(previous_price) && previous_price != 0) {
-      mom_change / previous_price
-    } else {
-      NA_real_
-    }
-
     latest_month <- latest_row$year_month_date
-    yoy_month <- as.Date(sprintf(
+    previous_month <- seq(latest_month, by = "-1 month", length.out = 2L)[2L]
+    year_ago <- as.Date(sprintf(
       "%s-%s-01",
-      as.integer(format(latest_month, "%Y")) - 1,
+      as.integer(format(latest_month, "%Y")) - 1L,
       format(latest_month, "%m")
     ))
-    yoy_row <- monthly[year_month_date == yoy_month]
-    yoy_price <- if (nrow(yoy_row) > 0) yoy_row$mean_price else NA_real_
-    yoy_pct <- if (!is.na(yoy_price) && yoy_price != 0) {
-      (current_price - yoy_price) / yoy_price
+    year_row <- monthly[year_month_date == year_ago]
+    year_price <- if (nrow(year_row)) year_row$mean_price else NA_real_
+    year_pct <- if (is.finite(year_price) && year_price != 0) {
+      (latest_row$mean_price - year_price) / year_price
     } else {
       NA_real_
     }
+    method <- if (identical(input$calculation, "record_weighted_mean")) {
+      "Record-weighted mean"
+    } else {
+      "Balanced median"
+    }
+    method_note <- if (identical(input$calculation, "record_weighted_mean")) {
+      paste(
+        "Each market-month mean contributes in proportion to its records;",
+        "the record weights carry through county and selected-area means."
+      )
+    } else {
+      paste(
+        "Take the median of records in each market-month, then the median",
+        "across markets in each county-month, then across available counties."
+      )
+    }
+    record_word <- if (latest_row$observations == 1L) "record" else "records"
+    market_word <- if (latest_row$markets == 1L) "market" else "markets"
+    county_word <- if (latest_row$counties == 1L) "county" else "counties"
 
     div(
-      class = "kfp-kpi-grid",
-      kpi_card(
-        "Latest month",
-        format(latest_month, "%b %Y"),
-        price_coverage_label(
-          latest_row$observations,
-          latest_row$markets,
-          latest_row$counties,
-          sum(is.finite(monthly$mean_price))
+      class = "kfp-overview-summary",
+      div(
+        class = "kfp-overview-summary-heading",
+        tags$span("Latest available price"),
+        tags$span(
+          class = "kfp-overview-date",
+          paste(format(latest_month, "%b %Y"), "within selected period")
         )
       ),
-      kpi_card(
-        "Price estimate",
-        format_number(current_price, 2),
-        paste(unit_label, "-", calculation_label())
+      div(
+        class = "kfp-overview-price",
+        tags$strong(paste(
+          currency_label(),
+          format_number(latest_row$mean_price, 2)
+        )),
+        tags$span(paste("per", tolower(input$unit)))
       ),
-      kpi_card(
-        "Month change",
-        format_change(mom_change, unit_label),
-        if (isTRUE(latest_row$consecutive_month)) {
-          format_percent(mom_pct)
-        } else {
-          "Not available: prior calendar month has no observation"
-        },
-        ifelse(mom_change > 0, "kfp-up", "kfp-down")
+      div(class = "kfp-overview-method", method),
+      div(
+        class = "kfp-overview-comparisons",
+        div(
+          class = "kfp-overview-comparison",
+          tags$span(class = "kfp-overview-comparison-label",
+                    paste("From", format(previous_month, "%b %Y"))),
+          tags$strong(format_price_comparison(
+            latest_row$percent_change
+          )),
+          if (!isTRUE(latest_row$consecutive_month)) {
+            tags$span("No estimate for the prior calendar month.")
+          }
+        ),
+        div(
+          class = "kfp-overview-comparison",
+          tags$span(class = "kfp-overview-comparison-label",
+                    paste("From", format(year_ago, "%b %Y"))),
+          tags$strong(format_price_comparison(year_pct)),
+          if (!is.finite(year_pct)) {
+            tags$span("No valid estimate for the same month last year.")
+          }
+        )
       ),
-      kpi_card(
-        "Year change",
-        format_percent(yoy_pct),
-        paste("vs", format(yoy_month, "%b %Y")),
-        ifelse(yoy_pct > 0, "kfp-up", "kfp-down")
+      p(
+        class = "kfp-overview-coverage",
+        paste0(
+          "Based on ", format_number(latest_row$observations),
+          " ", record_word, " from ", format_number(latest_row$markets),
+          " ", market_word, " in ", format_number(latest_row$counties),
+          " ", county_word, " this month."
+        )
       ),
-      kpi_card(
-        "Counties",
-        format_number(latest_row$counties),
-        "in latest month"
-      ),
-      kpi_card("Markets", format_number(latest_row$markets), "in latest month")
+      tags$details(
+        class = "kfp-overview-method-note",
+        tags$summary("How is this estimate calculated?"),
+        p(method_note),
+        p("Available markets can change between months.")
+      )
     )
   })
 
+  observeEvent(input$overview_to_trends, {
+    shiny::updateNavbarPage(session, "main_nav", selected = "Trends")
+  })
+
   output$overview_trend <- ggiraph::renderGirafe({
-    monthly <- monthly_summary()
-    shiny::validate(
-      shiny::need(
-        nrow(monthly) > 1,
-        "There is not enough monthly data for a trend."
-      )
-    )
+    shiny::validate(shiny::need(
+      nrow(filtered_data()) > 0,
+      "No price records match these filters. Broaden the selection or reset."
+    ))
+    monthly <- data.table::copy(monthly_summary())
+    shiny::validate(shiny::need(
+      sum(is.finite(monthly$mean_price)) > 1L,
+      "There is not enough monthly data for a trend."
+    ))
 
     monthly[, tooltip := paste0(
       "Month: ", format(year_month_date, "%b %Y"),
       "<br>", calculation_short(), ": ",
       format_number(mean_price, 2), " ", price_unit_label(),
       "<br>", calculation_label(),
-      "<br>Coverage: ", price_coverage_label(observations, markets, counties)
+      "<br>Coverage: ",
+      price_coverage_label(observations, markets, counties)
     )]
-    monthly[, month_id := as.character(year_month_date)]
+    monthly[, segment := cumsum(!is.finite(mean_price))]
+    observed <- is.finite(monthly$mean_price)
+    isolated <- observed &
+      !data.table::shift(observed, fill = FALSE) &
+      !data.table::shift(observed, type = "lead", fill = FALSE)
+    points <- monthly[observed]
+    if (nrow(points) > 36L) {
+      points <- monthly[which(isolated |
+        seq_along(observed) == length(observed))]
+    }
+    points[, month_id := as.character(year_month_date)]
+    span_months <- nrow(monthly)
+    date_breaks <- if (span_months <= 24L) {
+      "3 months"
+    } else if (span_months <= 72L) {
+      "1 year"
+    } else {
+      "2 years"
+    }
 
     gg <- ggplot2::ggplot(
       monthly,
       ggplot2::aes(x = year_month_date, y = mean_price)
     ) +
       ggiraph::geom_line_interactive(
-        ggplot2::aes(tooltip = tooltip, data_id = month_id, group = 1),
-        colour = "#00a2ab",
-        linewidth = 1.2
+        ggplot2::aes(group = segment, tooltip = tooltip),
+        colour = "#008d98",
+        linewidth = 1.1,
+        na.rm = TRUE
       ) +
       ggiraph::geom_point_interactive(
+        data = points,
         ggplot2::aes(tooltip = tooltip, data_id = month_id),
-        colour = "#00a2ab",
-        size = 2
+        colour = "#008d98",
+        size = 2.7
       ) +
       ggplot2::labs(
-        title = "Monthly price trend",
-        x = "Month",
-        y = paste(calculation_short(), unit_denominator())
+        x = NULL,
+        y = price_unit_label()
       ) +
-      ggplot2::scale_x_date(date_labels = "%Y", date_breaks = "2 years") +
-      ggplot2::theme_minimal(base_size = 12) +
+      ggplot2::scale_x_date(
+        date_labels = "%b %Y",
+        date_breaks = date_breaks
+      ) +
+      ggplot2::theme_minimal(base_size = 14) +
       ggplot2::theme(
-        plot.title = ggplot2::element_text(face = "bold"),
-        panel.grid.minor = ggplot2::element_blank()
+        panel.grid.minor = ggplot2::element_blank(),
+        panel.grid.major.x = ggplot2::element_blank(),
+        axis.title.y = ggplot2::element_text(margin =
+          ggplot2::margin(r = 10))
       )
 
-    standard_girafe(gg, width_svg = 14, height_svg = 4.4)
+    standard_girafe(gg, width_svg = 12, height_svg = 4.2)
   })
 
   output$recent_change_table <- DT::renderDT({
@@ -552,7 +703,7 @@ app_server <- function(input, output, session) {
     ]
     data.table::setnames(display, "Estimate", estimate_heading)
 
-    datatable_compact(display, page_length = 6)
+    datatable_compact(display, page_length = 12, scroll_x = FALSE)
   })
 
   output$top_county_table <- DT::renderDT({
@@ -575,7 +726,7 @@ app_server <- function(input, output, session) {
         } else {
           stats::median(estimate)
         },
-        `Latest Month` = max(year_month_date),
+        `Latest observation month` = max(year_month_date),
         Records = sum(records),
         Markets = max(markets),
         `Covered Months` = .N
@@ -585,9 +736,14 @@ app_server <- function(input, output, session) {
 
     display[, Estimate := vapply(Estimate,
      format_number, character(1), digits = 2)]
-    display[, `Latest Month` := format(`Latest Month`, "%b %Y")]
+    display[
+      ,
+      `Latest observation month` := format(
+        `Latest observation month`, "%b %Y"
+      )
+    ]
     data.table::setnames(display, "Estimate", estimate_heading)
-    datatable_compact(display)
+    datatable_compact(display, page_length = 10, scroll_x = FALSE)
   })
 
   output$top_market_table <- DT::renderDT({
@@ -608,7 +764,7 @@ app_server <- function(input, output, session) {
         } else {
           stats::median(estimate)
         },
-        `Latest Month` = max(year_month_date),
+        `Latest observation month` = max(year_month_date),
         Records = sum(records),
         `Covered Months` = .N
       ),
@@ -616,68 +772,381 @@ app_server <- function(input, output, session) {
     ][order(-Estimate)][1:min(.N, 10)]
 
     display[, Estimate := vapply(Estimate, format_number, character(1), digits = 2)]
-    display[, `Latest Month` := format(`Latest Month`, "%b %Y")]
+    display[
+      ,
+      `Latest observation month` := format(
+        `Latest observation month`, "%b %Y"
+      )
+    ]
     data.table::setnames(display, "Estimate", estimate_heading)
-    datatable_compact(display)
+    datatable_compact(display, page_length = 10, scroll_x = FALSE)
   })
 
   trend_summary <- reactive({
-    dt <- filtered_data()
-    req(nrow(dt) > 1, input$trend_frequency)
-    price_val <- price_column()
-
-    dt <- dt[is.finite(get(price_val))]
-    req(nrow(dt) > 1)
+    monthly <- data.table::copy(monthly_summary())
+    req(nrow(monthly) > 0, input$trend_frequency)
 
     if (identical(input$trend_frequency, "quarter")) {
-      summary <- dt[
-        ,
-        .(
-          mean_price = mean(get(price_val), na.rm = TRUE),
-          observations = .N,
-          counties = uniqueN(county, na.rm = TRUE),
-          markets = uniqueN(market, na.rm = TRUE)
-        ),
-        by = .(period = year_quarter_date)
-      ]
+      summary <- quarterly_trend_data(monthly)
       step <- "3 months"
-      frequency_label <- "quarterly"
     } else {
-      summary <- dt[
+      summary <- monthly[
         ,
         .(
-          mean_price = mean(get(price_val), na.rm = TRUE),
-          observations = .N,
-          counties = uniqueN(county, na.rm = TRUE),
-          markets = uniqueN(market, na.rm = TRUE)
-        ),
-        by = .(period = year_month_date)
+          period = year_month_date,
+          mean_price, observations, counties, markets,
+          covered_months = as.integer(is.finite(mean_price))
+        )
       ]
       step <- "month"
-      frequency_label <- "monthly"
     }
 
-    summary <- summary[order(period)]
-    if (nrow(summary) > 1) {
-      all_periods <- data.table::data.table(
-        period = seq(min(summary$period), max(summary$period), by = step)
-      )
-      summary <- merge(all_periods, summary, by = "period", all.x = TRUE, sort = TRUE)
-    }
-
+    all_periods <- data.table::data.table(
+      period = seq(min(summary$period), max(summary$period), by = step)
+    )
+    summary <- merge(
+      all_periods, summary, by = "period", all.x = TRUE, sort = TRUE
+    )
     summary[, display_price := mean_price]
     if (identical(input$trend_display, "smooth")) {
       summary[, display_price := data.table::frollmean(
-        mean_price,
-        n = 3L,
-        align = "right",
-        fill = NA_real_
+        mean_price, n = 3L, align = "right", fill = NA_real_
       )]
     }
-
-    summary[, frequency_label := frequency_label]
-    summary
+    summary[]
   })
+
+  trend_panel_open <- shiny::reactiveVal(FALSE)
+  trend_compare_open <- shiny::reactiveVal(FALSE)
+  trend_reference_id <- shiny::reactiveVal("")
+  trend_compare_id <- shiny::reactiveVal("")
+
+  trend_observed_periods <- reactive({
+    trend <- data.table::copy(trend_summary())
+    trend <- trend[is.finite(mean_price)]
+    if (!nrow(trend)) {
+      return(trend)
+    }
+
+    trend[, period_id := as.character(period)]
+    trend[]
+  })
+
+  valid_trend_period <- function(period_id, trend) {
+    nzchar(period_id) && nrow(trend) && period_id %in% trend$period_id
+  }
+
+  clear_trend_comparison <- function() {
+    trend_compare_id("")
+    trend_compare_open(FALSE)
+    shiny::updateSelectInput(
+      session,
+      "trend_compare_period",
+      selected = ""
+    )
+  }
+
+  clear_trend_selection <- function(return_focus = FALSE) {
+    trend_reference_id("")
+    trend_panel_open(FALSE)
+    clear_trend_comparison()
+    shiny::updateSelectInput(
+      session,
+      "trend_reference_period",
+      selected = ""
+    )
+    if (isTRUE(return_focus)) {
+      session$sendCustomMessage("kfp-focus", list(id = "trend_selection_open"))
+    }
+  }
+
+  observe({
+    if (isTRUE(trend_panel_open())) {
+      shinyjs::show("trend_selection_panel")
+    } else {
+      shinyjs::hide("trend_selection_panel")
+    }
+
+    if (isTRUE(trend_panel_open()) && isTRUE(trend_compare_open())) {
+      shinyjs::show("trend_compare_panel")
+      shinyjs::hide("trend_compare_toggle")
+    } else {
+      shinyjs::hide("trend_compare_panel")
+      shinyjs::show("trend_compare_toggle")
+    }
+
+    shinyjs::toggleState(
+      "trend_compare_toggle",
+      condition = nzchar(trend_reference_id())
+    )
+  })
+
+  observeEvent(trend_observed_periods(), {
+    trend <- trend_observed_periods()
+    quarterly <- identical(input$trend_frequency, "quarter")
+    choices <- c(
+      "Choose a period" = "",
+      trend_period_choices(trend, quarterly)
+    )
+
+    reference_id <- trend_reference_id()
+    if (!valid_trend_period(reference_id, trend)) {
+      reference_id <- ""
+      trend_reference_id("")
+      clear_trend_comparison()
+    }
+
+    compare_id <- trend_compare_id()
+    if (!valid_trend_period(compare_id, trend) ||
+        identical(compare_id, reference_id)) {
+      compare_id <- ""
+      trend_compare_id("")
+    }
+
+    shiny::updateSelectInput(
+      session,
+      "trend_reference_period",
+      choices = choices,
+      selected = reference_id
+    )
+    shiny::updateSelectInput(
+      session,
+      "trend_compare_period",
+      choices = choices,
+      selected = compare_id
+    )
+
+    if (!nrow(trend)) {
+      clear_trend_selection()
+    }
+  }, ignoreNULL = FALSE)
+
+  trend_reference_row <- reactive({
+    trend <- trend_observed_periods()
+    reference_id <- trend_reference_id()
+    if (!valid_trend_period(reference_id, trend)) {
+      return(trend[0])
+    }
+    trend[period_id == reference_id]
+  })
+
+  trend_compare_row <- reactive({
+    trend <- trend_observed_periods()
+    compare_id <- trend_compare_id()
+    if (!valid_trend_period(compare_id, trend)) {
+      return(trend[0])
+    }
+    trend[period_id == compare_id]
+  })
+
+  output$trend_period_summary <- renderUI({
+    reference_row <- trend_reference_row()
+    quarterly <- identical(input$trend_frequency, "quarter")
+
+    if (!nrow(reference_row)) {
+      return(tags$p(
+        class = "kfp-trends-note kfp-trend-selection-empty",
+        "Choose a month or quarter from the chart, or use the",
+        "Reference period selector below."
+      ))
+    }
+
+    period_label <- trend_period_label(
+      reference_row$period,
+      quarterly,
+      reference_row$covered_months
+    )
+    smooth_value <- if (
+      identical(input$trend_display, "smooth") &&
+        is.finite(reference_row$display_price)
+    ) {
+      paste(format_number(reference_row$display_price, 2), price_unit_label())
+    } else if (identical(input$trend_display, "smooth")) {
+      "Not available"
+    } else {
+      "Not shown"
+    }
+
+    div(
+      class = "kfp-trend-selection-summary",
+      div(
+        class = "kfp-trend-selection-card",
+        tags$span("Period"),
+        tags$strong(period_label)
+      ),
+      div(
+        class = "kfp-trend-selection-card",
+        tags$span("Selected estimate"),
+        tags$strong(paste(
+          format_number(reference_row$mean_price, 2),
+          price_unit_label()
+        )),
+        tags$small(price_calculation_label(
+          input$calculation %||% "balanced_median"
+        ))
+      ),
+      div(
+        class = "kfp-trend-selection-card",
+        tags$span("Trailing average"),
+        tags$strong(smooth_value),
+        tags$small("Shown only in trailing-average mode")
+      ),
+      div(
+        class = "kfp-trend-selection-card",
+        tags$span("Coverage"),
+        tags$strong(paste(
+          format_number(reference_row$observations), "records"
+        )),
+        tags$small(paste(
+          format_number(reference_row$markets), "markets |",
+          format_number(reference_row$counties), "counties"
+        ))
+      )
+    )
+  })
+
+  output$trend_compare_summary <- renderUI({
+    reference_row <- trend_reference_row()
+    compare_row <- trend_compare_row()
+    quarterly <- identical(input$trend_frequency, "quarter")
+
+    if (!isTRUE(trend_compare_open()) || !nrow(reference_row) ||
+        !nrow(compare_row)) {
+      return(NULL)
+    }
+
+    difference <- compare_row$mean_price - reference_row$mean_price
+    percent_change <- trend_percent_change(
+      reference_row$mean_price,
+      compare_row$mean_price
+    )
+
+    div(
+      class = "kfp-trend-compare-result",
+      if (identical(input$trend_display, "smooth")) {
+        tags$p(
+          class = "kfp-trends-note",
+          "Comparison uses the selected period estimate, not the",
+          "trailing average line."
+        )
+      },
+      div(
+        class = "kfp-trend-selection-card",
+        tags$span("Reference period"),
+        tags$strong(trend_period_label(
+          reference_row$period,
+          quarterly,
+          reference_row$covered_months
+        ))
+      ),
+      div(
+        class = "kfp-trend-selection-card",
+        tags$span("Comparison period"),
+        tags$strong(trend_period_label(
+          compare_row$period,
+          quarterly,
+          compare_row$covered_months
+        ))
+      ),
+      div(
+        class = "kfp-trend-selection-card",
+        tags$span("Difference"),
+        tags$strong(format_change(difference, price_unit_label()))
+      ),
+      div(
+        class = "kfp-trend-selection-card",
+        tags$span("Percentage difference"),
+        tags$strong(if (is.finite(percent_change)) {
+          format_percent(percent_change)
+        } else {
+          "Not available"
+        }),
+        tags$small("Comparison minus reference")
+      )
+    )
+  })
+
+  observeEvent(input$trend_selection_open, {
+    trend_panel_open(TRUE)
+    session$sendCustomMessage("kfp-focus", list(id = "trend_reference_period"))
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$trend_reference_period, {
+    trend <- trend_observed_periods()
+    reference_id <- input$trend_reference_period %||% ""
+
+    trend_reference_id(reference_id)
+    trend_panel_open(TRUE)
+
+    if (!valid_trend_period(reference_id, trend)) {
+      clear_trend_comparison()
+      return()
+    }
+
+    if (identical(trend_compare_id(), reference_id)) {
+      clear_trend_comparison()
+    }
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$trend_compare_toggle, {
+    if (!nzchar(trend_reference_id())) {
+      return()
+    }
+
+    trend_compare_open(TRUE)
+    session$sendCustomMessage("kfp-focus", list(id = "trend_compare_period"))
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$trend_compare_period, {
+    trend <- trend_observed_periods()
+    compare_id <- input$trend_compare_period %||% ""
+    if (!valid_trend_period(compare_id, trend) ||
+        identical(compare_id, trend_reference_id())) {
+      trend_compare_id("")
+      return()
+    }
+
+    trend_compare_id(compare_id)
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$trend_compare_close, {
+    clear_trend_comparison()
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$trend_selection_clear, {
+    clear_trend_selection(return_focus = TRUE)
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$trend_selection_escape, {
+    clear_trend_selection(return_focus = TRUE)
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$linePlot_selected, {
+    trend <- trend_observed_periods()
+    selected_id <- input$linePlot_selected[1]
+
+    if (length(selected_id) == 0L ||
+        !valid_trend_period(selected_id, trend) ||
+        identical(selected_id, trend_reference_id())) {
+      return()
+    }
+
+    trend_reference_id(selected_id)
+    trend_panel_open(TRUE)
+    shiny::updateSelectInput(
+      session,
+      "trend_reference_period",
+      selected = selected_id
+    )
+
+    if (identical(trend_compare_id(), selected_id)) {
+      clear_trend_comparison()
+    }
+  }, ignoreInit = TRUE)
+
+  observeEvent(input$reset_filters, {
+    clear_trend_selection()
+  }, ignoreInit = TRUE)
 
   output$trends_context <- renderUI({
     dt <- filtered_data()
@@ -694,208 +1163,290 @@ app_server <- function(input, output, session) {
       location <- paste(location, "-", input$page1_market)
     }
 
+    estimator <- price_calculation_label(
+      input$calculation %||% "balanced_median"
+    )
+
     shiny::tags$div(
       class = "kfp-trends-context",
       shiny::tags$strong(
         paste(input$commodity, input$pricetype, input$unit, sep = " | ")
       ),
+      shiny::tags$span(paste(" | Selected estimator:", estimator)),
       shiny::tags$span(paste(" | ", location, " | As of", format(last_date, "%b %Y"))),
       shiny::tags$span(paste(" | ", format_number(nrow(dt)), "records"))
     )
   })
 
   output$trends_kpis <- renderUI({
-    dt <- filtered_data()
-    req(nrow(dt) > 1)
-    price_val <- price_column()
-    valid <- dt[is.finite(get(price_val))]
-    req(nrow(valid) > 1)
-
-    monthly <- valid[
-      ,
-      .(mean_price = mean(get(price_val), na.rm = TRUE)),
-      by = .(year_month_date)
-    ][order(year_month_date)]
+    monthly <- data.table::copy(monthly_summary())
+    monthly <- monthly[is.finite(mean_price)]
+    req(nrow(monthly) > 0)
 
     latest <- monthly[.N]
-    latest_year <- as.integer(format(latest$year_month_date, "%Y")) - 1L
-    latest_month <- format(latest$year_month_date, "%m")
-    previous_date <- as.Date(sprintf("%s-%s-01", latest_year, latest_month))
+    previous_date <- as.Date(sprintf(
+      "%s-%s-01",
+      as.integer(format(latest$year_month_date, "%Y")) - 1L,
+      format(latest$year_month_date, "%m")
+    ))
     previous <- monthly[year_month_date == previous_date]
-    yoy_pct <- if (nrow(previous) > 0 && previous$mean_price != 0) {
+    yoy_pct <- if (nrow(previous) && previous$mean_price != 0) {
       (latest$mean_price - previous$mean_price) / previous$mean_price
     } else {
       NA_real_
     }
 
-    volatility <- if (nrow(monthly) > 1) {
-      stats::sd(monthly$mean_price, na.rm = TRUE)
-    } else {
-      NA_real_
-    }
-
     div(
-      class = "kfp-kpi-grid kfp-trends-kpis",
-      kpi_card(
-        "Latest price",
-        format_number(latest$mean_price, 2),
-        price_unit_label()
+      class = "kfp-trends-summary",
+      div(
+        class = "kfp-trends-summary-item",
+        tags$span("Latest monthly estimate"),
+        tags$strong(paste(
+          format_number(latest$mean_price, 2), price_unit_label()
+        )),
+        tags$small(paste(
+          format(latest$year_month_date, "%b %Y"), " | ",
+          format_number(latest$observations), " records | ",
+          format_number(latest$markets), " markets | ",
+          format_number(latest$counties), " counties"
+        ))
       ),
-      kpi_card(
-        "12-month change",
-        format_percent(yoy_pct),
-        if (nrow(previous) > 0) {
+      div(
+        class = "kfp-trends-summary-item",
+        tags$span("Same month last year"),
+        tags$strong(format_price_comparison(yoy_pct)),
+        tags$small(if (nrow(previous)) {
           paste("vs", format(previous_date, "%b %Y"))
         } else {
-          "Not available"
-        },
-        ifelse(is.na(yoy_pct), "", ifelse(yoy_pct > 0, "kfp-up", "kfp-down"))
+          "No matching month available"
+        })
+      )
+    )
+  })
+
+  output$trend_scope_note <- renderUI({
+    method <- price_calculation_label(
+      input$calculation %||% "balanced_median"
+    )
+    period <- if (identical(input$trend_frequency, "quarter")) {
+      "Quarterly points average the available monthly estimates;"
+    } else {
+      "Each point is a monthly estimate;"
+    }
+    smooth <- if (identical(input$trend_display, "smooth")) {
+      " The bold line is a trailing average of three consecutive points."
+    } else {
+      ""
+    }
+    tags$p(
+      class = "kfp-trends-note",
+      paste0(period, " method: ", method, ".", smooth),
+      "Missing months remain gaps. Prices are nominal."
+    )
+  })
+
+  output$trend_table_note <- renderUI({
+    tags$p(
+      class = "kfp-trends-note",
+      if (identical(input$trend_frequency, "quarter")) {
+        "Quarterly values average available monthly estimates using "
+      } else {
+        "Monthly values use "
+      },
+      price_calculation_label(
+        input$calculation %||% "balanced_median"
       ),
-      kpi_card(
-        "Period high",
-        format_number(max(monthly$mean_price, na.rm = TRUE), 2),
-        price_unit_label()
-      ),
-      kpi_card(
-        "Monthly volatility",
-        format_number(volatility, 2),
-        "SD of monthly averages"
-      ),
-      kpi_card("Observations", format_number(nrow(valid)), "price records")
+      " (", price_unit_label(), "). Change requires consecutive",
+      " periods; gaps and missing comparisons are shown as blank."
+    )
+  })
+
+  output$annual_note <- renderUI({
+    price_val <- price_column()
+    dt <- filtered_data()[is.finite(get(price_val))]
+    req(nrow(dt) > 0)
+    monthly <- dt[
+      , .(mean_price = mean(get(price_val))),
+      by = .(month = as.Date(format(date, "%Y-%m-01")))
+    ]
+    spread <- if (nrow(monthly) > 1L) {
+      format_number(stats::sd(monthly$mean_price), 2)
+    } else {
+      "Unavailable"
+    }
+    tags$p(
+      class = "kfp-trends-note",
+      "Dots show each year's mean recorded price; bars span the lowest",
+      " to highest record. This view uses raw records, not the selected",
+      " monthly estimator. Incomplete years and changing market coverage",
+      " limit comparisons. Spread of monthly raw-record means: ",
+      spread, " ", price_unit_label(), "."
+    )
+  })
+
+  output$seasonality_note <- renderUI({
+    dt <- filtered_data()
+    req(nrow(dt) > 0)
+    years <- as.integer(format(dt$date, "%Y"))
+    tags$p(
+      class = "kfp-trends-note",
+      "Index 100 is each year's mean of its available monthly raw-record",
+      " means; 110 means 10% above that yearly mean. The shaded band",
+      " spans the middle half of observed yearly values. Partial years",
+      " are included. This view does not use the monthly estimator.",
+      " Contributing years: ", min(years), " to ", max(years), "."
     )
   })
 
   output$linePlot <- ggiraph::renderGirafe({
     trend <- trend_summary()
-    shiny::validate(shiny::need(sum(is.finite(trend$mean_price)) > 1, "There is not enough data for a trend."))
+    shiny::validate(shiny::need(
+      sum(is.finite(trend$mean_price)) > 1,
+      "There is not enough data for a trend."
+    ))
 
-    trend[, hover_text := ifelse(
-      is.na(mean_price),
-      paste0(format(period, "%b %Y"), " - No observations"),
-      paste0(
-        format(period, "%b %Y"),
-        "<br>Mean recorded price: ",
-        format_number(mean_price, 2), " ", price_unit_label(),
-        "<br>Records: ", format_number(observations),
-        "<br>Counties: ", format_number(counties),
-        "<br>Markets: ", format_number(markets)
-      )
-    )]
+    method <- price_calculation_short_label(
+      input$calculation %||% "balanced_median"
+    )
+    quarterly <- identical(input$trend_frequency, "quarter")
+    smoothed <- identical(input$trend_display, "smooth")
+    trend[, segment := cumsum(!is.finite(mean_price))]
+    trend[, smooth_segment := cumsum(!is.finite(display_price))]
     trend[, period_id := as.character(period)]
+    trend[, display_y := data.table::fifelse(
+      is.finite(display_price), display_price, mean_price
+    )]
+    trend[, hover_text := paste0(
+      format(period, if (quarterly) "%Y-%m" else "%b %Y"),
+      if (quarterly) paste0(
+        " (quarter; ", covered_months, " observed months)"
+      ) else "",
+      "<br>", method, ": ", format_number(mean_price, 2),
+      " ", price_unit_label(),
+      if (smoothed) paste0(
+        "<br>Trailing 3-period average: ",
+        format_number(display_price, 2), " ", price_unit_label()
+      ) else "",
+      "<br>Records: ", format_number(observations),
+      "<br>Markets: ", format_number(markets),
+      "<br>Counties: ", format_number(counties)
+    )]
 
     gg <- ggplot2::ggplot(trend, ggplot2::aes(x = period))
-    if (identical(input$trend_display, "smooth")) {
+    if (smoothed) {
       gg <- gg +
-        ggiraph::geom_line_interactive(
-          ggplot2::aes(
-            y = mean_price,
-            tooltip = hover_text,
-            data_id = period_id,
-            group = 1
-          ),
-          colour = "#9bb5b5",
-          linewidth = 0.8,
-          na.rm = TRUE
+        ggplot2::geom_line(
+          ggplot2::aes(y = mean_price, group = segment),
+          colour = "#9bb5b5", linewidth = 0.7, na.rm = TRUE
         ) +
         ggiraph::geom_line_interactive(
           ggplot2::aes(
-            y = display_price,
-            tooltip = hover_text,
-            data_id = period_id,
-            group = 1
+            y = display_price, group = smooth_segment,
+            tooltip = hover_text
           ),
-          colour = "#00a2ab",
-          linewidth = 1.3,
-          na.rm = TRUE
-        ) +
-        ggiraph::geom_point_interactive(
-          ggplot2::aes(
-            y = display_price,
-            tooltip = hover_text,
-            data_id = period_id
-          ),
-          colour = "#00a2ab",
-          size = 2.2,
-          na.rm = TRUE
+          colour = "#008e96", linewidth = 1.4, na.rm = TRUE
         )
     } else {
-      gg <- gg +
-        ggiraph::geom_line_interactive(
-          ggplot2::aes(
-            y = mean_price,
-            tooltip = hover_text,
-            data_id = period_id,
-            group = 1
-          ),
-          colour = "#00a2ab",
-          linewidth = 1.3,
-          na.rm = TRUE
-        ) +
-        ggiraph::geom_point_interactive(
-          ggplot2::aes(
-            y = mean_price,
-            tooltip = hover_text,
-            data_id = period_id,
-            group = 1
-          ),
-          colour = "#00a2ab",
-          size = 2.2,
-          na.rm = TRUE
-        )
+      gg <- gg + ggiraph::geom_line_interactive(
+        ggplot2::aes(
+          y = mean_price, group = segment, tooltip = hover_text
+        ),
+        colour = "#008e96", linewidth = 1.4, na.rm = TRUE
+      )
+    }
+    selection_points <- trend[is.finite(mean_price)]
+    gg <- gg + ggiraph::geom_point_interactive(
+      data = selection_points,
+      ggplot2::aes(
+        y = display_y, tooltip = hover_text, data_id = period_id
+      ),
+      shape = 21,
+      fill = "#008e96",
+      colour = "#008e96",
+      alpha = 0.01,
+      size = 5,
+      stroke = 0.2
+    )
+    points <- trend[is.finite(display_price)][
+      , .SD[c(1L, .N)], by = segment
+    ]
+    points <- unique(points, by = "period")
+    gg <- gg + ggiraph::geom_point_interactive(
+      data = points,
+      ggplot2::aes(
+        y = display_price, tooltip = hover_text, data_id = period_id
+      ),
+      colour = "#008e96", size = 2.5
+    ) +
+      ggplot2::labs(
+        x = if (quarterly) "Quarter" else "Month",
+        y = paste(method, unit_denominator())
+      ) +
+      ggplot2::scale_x_date(
+        date_labels = "%Y",
+        date_breaks = if (nrow(trend) > 120) "2 years" else "1 year"
+      ) +
+      ggplot2::theme_minimal(base_size = 12) +
+      ggplot2::theme(panel.grid.minor = ggplot2::element_blank())
+
+    selected_id <- trend_reference_id()
+    if (!selected_id %in% selection_points$period_id) {
+      selected_id <- character()
     }
 
-    gg <- gg +
-      ggplot2::labs(
-        title = paste(input$commodity, input$pricetype, "price trend"),
-        x = if (identical(input$trend_frequency, "quarter")) {
-          "Quarter"
-        } else {
-          "Month"
-        },
-        y = paste("Mean recorded price", unit_denominator())
-      ) +
-      ggplot2::scale_x_date(date_labels = "%Y", date_breaks = "2 years") +
-      ggplot2::theme_minimal(base_size = 12) +
-      ggplot2::theme(
-        legend.position = "bottom",
-        plot.title = ggplot2::element_text(face = "bold"),
-        panel.grid.minor = ggplot2::element_blank()
-      )
-
-    standard_girafe(gg, width_svg = 14, height_svg = 4.4)
+    standard_girafe(
+      gg,
+      width_svg = 14,
+      height_svg = 4.4,
+      selectable = TRUE,
+      selected = selected_id
+    )
   })
 
   output$trend_change_table <- DT::renderDT({
-    monthly <- copy(monthly_summary())
-    shiny::validate(shiny::need(nrow(monthly) > 1,
-                                "No monthly changes available."))
-
-    monthly[, previous_price := data.table::shift(mean_price)]
-    monthly[, change := mean_price - previous_price]
-    monthly[, pct_change := data.table::fifelse(
-      previous_price != 0,
-      change / previous_price,
-      NA_real_
+    trend <- data.table::copy(trend_summary())
+    shiny::validate(shiny::need(
+      nrow(trend) > 0, "No period values are available."
+    ))
+    trend[, previous := data.table::shift(mean_price)]
+    trend[, change := mean_price - previous]
+    trend[, percent_change := data.table::fifelse(
+      is.finite(previous) & previous != 0,
+      100 * change / previous, NA_real_
     )]
-
-    display <- monthly[order(-year_month_date)][1:min(.N, 12)][
+    quarterly <- identical(input$trend_frequency, "quarter")
+    trend[, label := if (quarterly) {
+      paste0(
+        "Q", (as.integer(format(period, "%m")) - 1L) %/% 3L + 1L,
+        " ", format(period, "%Y")
+      )
+    } else {
+      format(period, "%b %Y")
+    }]
+    display <- trend[order(-period)][
       ,
       .(
-        Month = format(year_month_date, "%b %Y"),
-        avg_price = format_number(mean_price, 2),
-        Change = vapply(change, format_change, character(1),
-          unit_label = price_unit_label()
-        ),
-        pct_change = vapply(pct_change, format_percent, character(1)),
-        Records = observations
+        Period = label,
+        Estimate = mean_price,
+        Change = change,
+        `% change` = percent_change,
+        `Trailing average` = if (
+          identical(input$trend_display, "smooth")
+        ) display_price else NULL,
+        Records = observations,
+        Markets = markets,
+        Counties = counties,
+        `Covered months` = covered_months
       )
     ]
-    data.table::setnames(
-      display, c("avg_price", "pct_change"),
-      c("Average price", "% change")
+    widget <- datatable_compact(
+      display, page_length = 12, scroll_x = TRUE
     )
-
-    datatable_compact(display, page_length = 6)
+    number_columns <- intersect(
+      c("Estimate", "Change", "% change", "Trailing average"),
+      names(display)
+    )
+    DT::formatRound(widget, columns = number_columns, digits = 1)
   })
 
   output$main_price_histogram <- ggiraph::renderGirafe({
@@ -912,7 +1463,10 @@ app_server <- function(input, output, session) {
         mean_price = mean(get(price_val), na.rm = TRUE),
         min_price = min(get(price_val), na.rm = TRUE),
         max_price = max(get(price_val), na.rm = TRUE),
-        observations = .N
+        observations = .N,
+        covered_months = data.table::uniqueN(format(date, "%Y-%m")),
+        markets = data.table::uniqueN(market),
+        counties = data.table::uniqueN(county)
       ),
       by = .(calendar_year = as.integer(format(date, "%Y")))
     ][order(calendar_year)]
@@ -924,7 +1478,11 @@ app_server <- function(input, output, session) {
       " ", price_unit_label(),
       "<br>Range: ", format_number(min_price, 2), " - ",
       format_number(max_price, 2),
-      "<br>Records: ", format_number(observations)
+      "<br>Records: ", format_number(observations),
+      "<br>Covered months: ", covered_months, " of 12",
+      ifelse(covered_months < 12, " (partial)", ""),
+      "<br>Markets: ", markets,
+      "<br>Counties: ", counties
     )]
 
     gg <- ggplot2::ggplot(annual, ggplot2::aes(x = year_date, y = mean_price)) +
@@ -933,18 +1491,13 @@ app_server <- function(input, output, session) {
         colour = "#b9dfe1",
         linewidth = 1.1
       ) +
-      ggiraph::geom_line_interactive(
-        ggplot2::aes(tooltip = hover_text, data_id = year_id, group = 1),
-        colour = "#00a2ab",
-        linewidth = 1.1
-      ) +
       ggiraph::geom_point_interactive(
         ggplot2::aes(tooltip = hover_text, data_id = year_id),
         colour = "#00a2ab",
         size = 2
       ) +
       ggplot2::labs(
-        title = paste(input$commodity, input$pricetype, "annual price range"),
+        title = NULL,
         x = "Year",
         y = paste("Mean recorded price", unit_denominator())
       ) +
@@ -988,7 +1541,8 @@ app_server <- function(input, output, session) {
         season_index = mean(season_index, na.rm = TRUE),
         lower = stats::quantile(season_index, 0.25, na.rm = TRUE, names = FALSE),
         upper = stats::quantile(season_index, 0.75, na.rm = TRUE, names = FALSE),
-        observations = sum(observations)
+        observations = sum(observations),
+        years = .N
       ),
       by = month_num
     ][order(month_num)]
@@ -998,6 +1552,7 @@ app_server <- function(input, output, session) {
       month_label,
       "<br>Index: ", format_number(season_index, 1),
       "<br>Middle 50%: ", format_number(lower, 1), " - ", format_number(upper, 1),
+      "<br>Years: ", years,
       "<br>Records: ", format_number(observations)
     )]
 
@@ -1023,7 +1578,7 @@ app_server <- function(input, output, session) {
       ggplot2::geom_hline(yintercept = 100, linetype = "dashed", colour = "#7b8c8c") +
       ggplot2::scale_x_continuous(breaks = 1:12, labels = month.abb) +
       ggplot2::labs(
-        title = "Monthly price index (year average = 100)",
+        title = NULL,
         x = "Month",
         y = "Index"
       ) +
@@ -1036,114 +1591,147 @@ app_server <- function(input, output, session) {
     standard_girafe(gg, width_svg = 11.5, height_svg = 4.1)
   })
 
-  output$geography_panel_ui <- renderUI({
+  geography_summary <- reactive({
     price_val <- price_column()
-    dt <- filtered_data()[is.finite(get(price_val)) & !is.na(county) & !is.na(market)]
-
-    show_chart <- nrow(dt) > 0 && (
-      !identical(input$page1_market, "All") ||
-        (!identical(input$page1_county, "All") && data.table::uniqueN(dt$market) > 1) ||
-        (identical(input$page1_county, "All") && data.table::uniqueN(dt$county) > 1) ||
-        (identical(input$page1_county, "All") && data.table::uniqueN(dt$market) > 1)
-    )
-
-    if (isTRUE(show_chart)) {
-      plot_panel(
-        "Geographic comparison",
-        withSpinner(
-          visualization_frame(
-            ggiraph::girafeOutput("geography_bar_plot", height = "100%"),
-            "compact"
-          ),
-          color = "#00a2ab"
-        )
-      )
-    } else {
-      location <- if (nrow(dt) > 0) unique(dt$county)[1] else "No location"
-      div(
-        class = "kfp-panel kfp-compact-message",
-        h4("Geographic comparison"),
-        shiny::tags$p(paste("Only", location, "is available for this selection."))
-      )
-    }
-  })
-  output$geography_bar_plot <- ggiraph::renderGirafe({
-    price_val <- price_column()
-    dt <- filtered_data()[is.finite(get(price_val)) & !is.na(county) & !is.na(market)]
-    shiny::validate(shiny::need(nrow(dt) > 0, "No geographic data available."))
+    dt <- filtered_data()[
+      is.finite(get(price_val)) & !is.na(county) & !is.na(market)
+    ]
+    req(nrow(dt) > 0)
 
     if (!identical(input$page1_market, "All")) {
-      benchmark_dt <- base_filtered_data()[is.finite(get(price_val))]
-      selected_mean <- mean(dt[[price_val]], na.rm = TRUE)
-      benchmark_mean <- mean(benchmark_dt[[price_val]], na.rm = TRUE)
-      scope_label <- if (identical(input$page1_county,
-      "All")) "Kenya benchmark" else paste(input$page1_county,
-       "benchmark")
-      comparison <- data.table::data.table(
-        location = c(input$page1_market, scope_label),
-        mean_price = c(selected_mean, benchmark_mean),
-        records = c(nrow(dt), nrow(benchmark_dt))
-      )
-      chart_title <- paste(input$page1_market, "against", scope_label)
-    } else {
+      benchmark <- base_filtered_data()[
+        is.finite(get(price_val)) & !is.na(county) & !is.na(market)
+      ]
       if (!identical(input$page1_county, "All")) {
-        grouping <- "market"
-        chart_title <- paste("Markets in", input$page1_county)
-      } else if (data.table::uniqueN(dt$county) > 1) {
-        grouping <- "county"
-        chart_title <- "Mean recorded price by county"
-      } else if (data.table::uniqueN(dt$market) > 1) {
-        grouping <- "market"
-        chart_title <- "Mean recorded price by market"
-      } else {
-        shiny::validate(shiny::need(FALSE, paste("Only",
-        unique(dt$county)[1],
-        "is available for this selection.")))
+        benchmark <- benchmark[county == input$page1_county]
       }
-
+      scope <- if (identical(input$page1_county, "All")) {
+        "All available markets"
+      } else {
+        paste("All available markets in", input$page1_county)
+      }
+      comparison <- data.table::rbindlist(list(
+        data.table::data.table(
+          location = input$page1_market,
+          mean_price = mean(dt[[price_val]]),
+          records = nrow(dt),
+          covered_months = data.table::uniqueN(
+            format(dt$date, "%Y-%m")
+          ),
+          latest_month = max(as.Date(format(dt$date, "%Y-%m-01")))
+        ),
+        data.table::data.table(
+          location = scope,
+          mean_price = mean(benchmark[[price_val]]),
+          records = nrow(benchmark),
+          covered_months = data.table::uniqueN(
+            format(benchmark$date, "%Y-%m")
+          ),
+          latest_month = max(as.Date(
+            format(benchmark$date, "%Y-%m-01")
+          ))
+        )
+      ))
+    } else {
+      grouping <- if (!identical(input$page1_county, "All") ||
+        data.table::uniqueN(dt$county) == 1L) {
+        "market"
+      } else {
+        "county"
+      }
       comparison <- dt[
         ,
         .(
-          mean_price = mean(get(price_val), na.rm = TRUE),
-          records = .N
+          mean_price = mean(get(price_val)),
+          records = .N,
+          covered_months = data.table::uniqueN(
+            format(date, "%Y-%m")
+          ),
+          latest_month = max(as.Date(format(date, "%Y-%m-01")))
         ),
         by = .(location = get(grouping))
-      ][order(mean_price)]
+      ]
     }
+    comparison[order(-mean_price)]
+  })
 
+  output$geography_panel_ui <- renderUI({
+    comparison <- geography_summary()
+    if (nrow(comparison) < 2L) {
+      return(tags$p(
+        class = "kfp-trends-note",
+        "Only one location has prices for this selection."
+      ))
+    }
+    tags$div(
+      tags$p(
+        class = "kfp-trends-note",
+        "Mean of raw price records in the selected period (",
+        price_unit_label(), "). Locations can have different months and",
+        " numbers of records. The chart shows up to 12 locations;",
+        " search the table for all locations."
+      ),
+      shinycssloaders::withSpinner(
+        visualization_frame(
+          ggiraph::girafeOutput("geography_bar_plot", height = "100%"),
+          "trend-detail"
+        ),
+        color = "#00a2ab"
+      ),
+      DT::DTOutput("geography_table")
+    )
+  })
+
+  output$geography_table <- DT::renderDT({
+    comparison <- geography_summary()
+    display <- comparison[
+      ,
+      .(
+        Location = location,
+        `Mean recorded price` = mean_price,
+        Records = records,
+        `Covered months` = covered_months,
+        `Latest month` = format(latest_month, "%b %Y")
+      )
+    ]
+    DT::formatRound(
+      datatable_compact(display, page_length = 12),
+      columns = "Mean recorded price", digits = 2
+    )
+  })
+
+  output$geography_bar_plot <- ggiraph::renderGirafe({
+    comparison <- data.table::copy(geography_summary())
+    shiny::validate(shiny::need(
+      nrow(comparison) > 1, "No location comparison is available."
+    ))
+    comparison <- comparison[seq_len(min(nrow(comparison), 12L))]
+    comparison[, location_id := make.unique(as.character(location))]
     comparison[, hover_text := paste0(
       location,
       "<br>Mean recorded price: ",
-      format_number(mean_price, 2), " ",
-       price_unit_label(),
-      "<br>Records: ", format_number(records)
+      format_number(mean_price, 2), " ", price_unit_label(),
+      "<br>Records: ", format_number(records),
+      "<br>Covered months: ", covered_months,
+      "<br>Latest month: ", format(latest_month, "%b %Y")
     )]
-    comparison[, location_id := make.unique(as.character(location))]
 
     gg <- ggplot2::ggplot(
       comparison,
-      ggplot2::aes(
-        x = mean_price,
-        y = reorder(location, mean_price)
-      )
+      ggplot2::aes(x = mean_price, y = reorder(location, mean_price))
     ) +
       ggiraph::geom_col_interactive(
         ggplot2::aes(tooltip = hover_text, data_id = location_id),
-        fill = "#00a2ab",
-        width = 0.68
+        fill = "#008e96", width = 0.68
       ) +
       ggplot2::labs(
-        title = chart_title,
         x = paste("Mean recorded price", unit_denominator()),
         y = NULL
       ) +
       ggplot2::theme_minimal(base_size = 12) +
-      ggplot2::theme(
-        plot.title = ggplot2::element_text(face = "bold"),
-        panel.grid.minor = ggplot2::element_blank()
-      )
+      ggplot2::theme(panel.grid.minor = ggplot2::element_blank())
 
-    standard_girafe(gg, width_svg = 12, height_svg = 4)
+    standard_girafe(gg, width_svg = 12, height_svg = 4.4)
   })
 
   map_data <- reactive({
