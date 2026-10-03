@@ -63,7 +63,8 @@ add_climate_leaflet_values <- function(map, areas, style, group) {
     fillColor = style$colours, fillOpacity = 0.85,
     label = style$labels,
     labelOptions = leaflet::labelOptions(
-      textsize = "14px", style = list("white-space" = "pre-line")
+      textsize = "14px", className = "kfp-climate-tooltip",
+      style = list("white-space" = "pre-line")
     ),
     popup = gsub("\n", "<br>", htmltools::htmlEscape(style$labels)),
     highlightOptions = leaflet::highlightOptions(weight = 3)
@@ -73,8 +74,13 @@ add_climate_leaflet_values <- function(map, areas, style, group) {
 # Empty widgets render once; ready events gate proxy work until they exist.
 climate_leaflet_widget <- function(bounds) {
   map <- leaflet::leaflet(options = leaflet::leafletOptions(
-    minZoom = 4, maxZoom = 14, scrollWheelZoom = FALSE
+    minZoom = 4, maxZoom = 14, scrollWheelZoom = FALSE,
+    # Whole zoom levels can leave Kenya half the size that fits the map card.
+    zoomSnap = 0.1, zoomDelta = 0.5
   ))
+  map <- leaflet::addProviderTiles(
+    map, leaflet::providers$Esri.WorldGrayCanvas, group = "background"
+  )
   map <- fit_climate_leaflet_bounds(map, bounds)
   htmlwidgets::onRender(map, paste(
     "function(el, x) {",

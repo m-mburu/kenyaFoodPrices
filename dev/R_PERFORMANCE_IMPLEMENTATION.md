@@ -103,7 +103,9 @@ compressed payloads and server metrics against the hosted baseline.
 ## Rebuild and dependencies
 
 Leaflet 2.2.3 and its missing dependencies are recorded in `renv.lock`.
-`htmlwidgets` and `htmltools` are direct imports. Maps request no external tiles.
+`htmlwidgets` and `htmltools` are direct imports. The climate maps now use
+Esri World Gray Canvas background tiles, requested by the browser with Esri
+attribution. Earlier payload measurements exclude these background tile requests.
 Other dashboard plots retain their existing widgets.
 
 Python is needed only to rebuild the packaged display artifact after a GADM
