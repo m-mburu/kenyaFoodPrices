@@ -21,466 +21,30 @@ utils::globalVariables(c(
   "period_id", "previous_estimate", "segment", "smooth_segment"
 ))
 
-format_number <- function(x, digits = 0) {
-  if (length(x) == 0) {
-    return("Not available")
-  }
-
-  vapply(
-    x,
-    function(value) {
-      if (is.na(value) || !is.finite(value)) {
-        return("Not available")
-      }
-      format(round(value, digits), big.mark = ",", nsmall = digits, trim = TRUE)
-    },
-    character(1)
-  )
-}
-
-format_change <- function(x, unit_label) {
-  if (length(x) == 0) {
-    return("Not available")
-  }
-
-  vapply(
-    x,
-    function(value) {
-      if (is.na(value) || !is.finite(value)) {
-        return("Not available")
-      }
-      paste0(
-        ifelse(value > 0, "+", ""),
-        format_number(value, 2),
-        " ",
-        unit_label
-      )
-    },
-    character(1)
-  )
-}
-
-format_percent <- function(x) {
-  if (length(x) == 0) {
-    return("Not available")
-  }
-
-  vapply(
-    x,
-    function(value) {
-      if (is.na(value) || !is.finite(value)) {
-        return("Not available")
-      }
-      paste0(ifelse(value > 0, "+", ""), format_number(100 * value, 1), "%")
-    },
-    character(1)
-  )
-}
-
-format_price_comparison <- function(percent_change) {
-  if (length(percent_change) == 0L ||
-      !is.finite(percent_change)) {
-    return("Not available")
-  }
-  if (percent_change == 0) {
-    return("Unchanged")
-  }
-  direction <- if (percent_change > 0) "higher" else "lower"
-  paste0(format_number(abs(100 * percent_change), 1), "% ", direction)
-}
-
-kpi_card <- function(label, value, note = NULL, status = "") {
-  div(
-    class = paste("kfp-kpi", status),
-    div(class = "kfp-kpi-label", label),
-    div(class = "kfp-kpi-value", value),
-    if (!is.null(note)) div(class = "kfp-kpi-note", note)
-  )
-}
-
-# Compact DataTable. When every row fits on one page, pagination and the
-# page-length selector are hidden so the panel shows only useful controls.
-datatable_compact <- function(data, page_length = 8, scroll_x = TRUE) {
-  page_options <- sort(unique(c(as.integer(page_length), 10L, 25L)))
-  single_page <- nrow(data) <= page_length
-
-  DT::datatable(
-    data,
-    rownames = FALSE,
-    options = list(
-      pageLength = page_length,
-      lengthMenu = list(
-        c(page_options, -1L),
-        c(as.character(page_options), "All")
-      ),
-      dom = if (single_page) "t" else "ltip",
-      paging = !single_page,
-      autoWidth = TRUE,
-      scrollX = scroll_x
-    )
-  )
-}
-
-valid_price_date_range <- function(dates) {
-  length(dates) == 2L &&
-    inherits(dates, "Date") &&
-    !anyNA(dates) &&
-    dates[1L] <= dates[2L]
-}
-
-trend_period_label <- function(
-  period,
-  quarterly = FALSE,
-  covered_months = NA_integer_
-) {
-  period <- as.Date(period)
-  covered_months <- rep_len(covered_months, length(period))
-
-  vapply(
-    seq_along(period),
-    function(index) {
-      if (!isTRUE(quarterly)) {
-        return(format(period[index], "%b %Y"))
-      }
-
-      quarter <- (as.integer(format(period[index], "%m")) - 1L) %/% 3L + 1L
-      label <- paste0("Q", quarter, " ", format(period[index], "%Y"))
-      if (is.na(covered_months[index])) {
-        return(label)
-      }
-      paste0(label, " (", covered_months[index], " months)")
-    },
-    character(1)
-  )
-}
-
-trend_period_choices <- function(trend, quarterly = FALSE) {
-  trend <- data.table::copy(trend)
-  trend <- trend[is.finite(mean_price)][order(-period)]
-  if (!nrow(trend)) {
-    return(stats::setNames(character(), character()))
-  }
-
-  trend[, period_id := as.character(period)]
-  stats::setNames(
-    trend$period_id,
-    trend_period_label(trend$period, quarterly, trend$covered_months)
-  )
-}
-
-trend_percent_change <- function(reference_value, comparison_value) {
-  if (!is.finite(reference_value) || !is.finite(comparison_value) ||
-      reference_value == 0) {
-    return(NA_real_)
-  }
-
-  (comparison_value - reference_value) / reference_value
-}
-
-# A quarterly point is the mean of available monthly selected estimates.
-# Empty quarters remain missing; do not replace them with zero.
-quarterly_trend_data <- function(monthly) {
-  monthly <- data.table::copy(monthly)
-  monthly[, period := as.Date(sprintf(
-    "%s-%02d-01",
-    format(year_month_date, "%Y"),
-    ((as.integer(format(year_month_date, "%m")) - 1L) %/% 3L) *
-      3L + 1L
-  ))]
-  monthly[
-    ,
-    .(
-      mean_price = if (all(is.na(mean_price))) NA_real_ else
-        mean(mean_price, na.rm = TRUE),
-      observations = sum(observations, na.rm = TRUE),
-      counties = if (all(is.na(counties))) NA_integer_ else
-        max(counties, na.rm = TRUE),
-      markets = if (all(is.na(markets))) NA_integer_ else
-        max(markets, na.rm = TRUE),
-      covered_months = sum(is.finite(mean_price))
-    ),
-    by = period
-  ]
-}
-
 app_server <- function(input, output, session) {
   food_prices <- app_food_prices()
 
-  selected_price_dates <- reactive({
-    shiny::req(valid_price_date_range(input$page1_date))
-    input$page1_date
-  })
-
-  price_column <- reactive({
-    if (identical(input$Currency, "usdprice")) {
-      "usdprice"
-    } else {
-      "price"
-    }
-  })
-
-  currency_label <- reactive({
-    if (identical(input$Currency, "usdprice")) {
-      "USD"
-    } else {
-      "KES"
-    }
-  })
-
-  price_unit_label <- reactive({
-    unit <- tolower(gsub("\\s+", " ", input$unit %||% "unit"))
-    paste(currency_label(), "per", unit)
-  })
-
-  calculation_label <- reactive({
-    price_calculation_label(input$calculation %||% "balanced_median")
-  })
-
-  # Short estimator name for axis titles and table headings.
-  calculation_short <- reactive({
-    price_calculation_short_label(input$calculation %||% "balanced_median")
-  })
-
-  # Unit denominator for headings, for example "KES per kg".
-  unit_denominator <- reactive({
-    paste0("(", price_unit_label(), ")")
-  })
-
-  output$category_ui <- renderUI({
-    selectInput("category", "Category",
-     choices = sort(unique(food_prices$category)))
-  })
-
-  output$commodity_ui <- renderUI({
-    req(input$category)
-    commodity_filtered <- food_prices[category == input$category]
-
-    selectInput(
-      "commodity",
-      "Commodity",
-      choices = sort(unique(commodity_filtered$commodity))
-    )
-  })
-
-  output$unit_ui <- renderUI({
-    req(input$category, input$commodity)
-
-    unit_filtered <- food_prices[
-      category == input$category & commodity == input$commodity
-    ]
-
-    selectInput(
-      "unit",
-      "Unit",
-      choices = sort(unique(unit_filtered$unit))
-    )
-  })
-
-  output$pricetype_ui <- renderUI({
-    req(input$category, input$commodity, input$unit)
-
-    pricetype_filtered <- food_prices[
-      category == input$category &
-        commodity == input$commodity &
-        unit == input$unit
-    ]
-
-    selectInput(
-      "pricetype",
-      "Price Type",
-      choices = sort(unique(pricetype_filtered$pricetype))
-    )
-  })
-
-  # Recreate the range input on reset after its dependent controls settle.
-  reset_date_input <- shiny::reactiveVal(0L)
-
-  output$page_year_ui <- renderUI({
-    reset_date_input()
-    req(input$category, input$commodity, input$unit, input$pricetype)
-
-    year_filtered <- food_prices[
-      category == input$category &
-        commodity == input$commodity &
-        unit == input$unit &
-        pricetype == input$pricetype
-    ]
-    req(nrow(year_filtered) > 0)
-
-    min_date <- year_filtered[, min(date, na.rm = TRUE)]
-    max_date <- year_filtered[, max(date, na.rm = TRUE)]
-
-    dateRangeInput(
-      "page1_date",
-      "Date Range",
-      start = min_date,
-      end = max_date,
-      min = min_date,
-      max = max_date
-    )
-  })
-
-  output$page1_county_ui <- renderUI({
-    req(input$category, input$commodity,
-     input$unit, input$pricetype,
-     input$page1_date)
-
-    price_dates <- selected_price_dates()
-    county_filtered <- food_prices[
-      category == input$category &
-        commodity == input$commodity &
-        unit == input$unit &
-        pricetype == input$pricetype &
-        data.table::between(date, price_dates[1L], price_dates[2L]) &
-        !is.na(county)
-    ]
-
-    choices <- c("All", sort(unique(county_filtered$county)))
-    selectInput(
-      "page1_county",
-      "County",
-      choices = choices,
-      multiple = FALSE,
-      selected = "All"
-    )
-  })
-
-  output$page1_market_ui <- renderUI({
-    req(input$category, input$commodity,
-        input$unit, input$pricetype,
-        input$page1_date,
-        input$page1_county)
-
-    price_dates <- selected_price_dates()
-    market_filtered <- food_prices[
-      category == input$category &
-        commodity == input$commodity &
-        unit == input$unit &
-        pricetype == input$pricetype &
-        data.table::between(date, price_dates[1L], price_dates[2L])
-    ]
-
-    if (!identical(input$page1_county, "All")) {
-      market_filtered <- market_filtered[county %in% input$page1_county]
-    }
-
-    choices <- c("All", sort(unique(market_filtered$market)))
-    selectInput(
-      "page1_market",
-      "Market",
-      choices = choices,
-      multiple = FALSE,
-      selected = "All"
-    )
-  })
-
-  base_filtered_data <- reactive({
-    shiny::req(
-      input$category,
-      input$commodity,
-      input$unit,
-      input$pricetype,
-      input$page1_date
-    )
-
-    price_dates <- selected_price_dates()
-    food_prices[
-      category %in% input$category &
-        commodity %in% input$commodity &
-        unit %in% input$unit &
-        pricetype %in% input$pricetype &
-        data.table::between(date, price_dates[1L], price_dates[2L])
-    ]
-  })
-
-  filtered_data <- reactive({
-    req(input$page1_county, input$page1_market)
-
-    dt <- copy(base_filtered_data())
-
-    if (!identical(input$page1_county, "All")) {
-      dt <- dt[county %in% input$page1_county]
-    }
-
-    if (!identical(input$page1_market, "All")) {
-      dt <- dt[market %in% input$page1_market]
-    }
-
-    dt
-  })
-
-  output$filter_context <- renderUI({
-    req(input$category, input$commodity,
-     input$unit, input$pricetype, input$page1_date,
-     input$page1_county, input$page1_market)
-
-    county_label <- if (identical(input$page1_county, "All")) {
-      "All counties"
-    } else {
-      input$page1_county
-    }
-    market_label <- if (identical(input$page1_market, "All")) {
-      "All markets"
-    } else {
-      input$page1_market
-    }
-    date_label <- paste(
-      format(selected_price_dates()[1L], "%b %Y"),
-      format(selected_price_dates()[2L], "%b %Y"),
-      sep = " - "
-    )
-
-    shiny::tags$div(
-      class = "kfp-filter-context",
-      shiny::tags$span(class = "kfp-filter-chip", input$commodity),
-      shiny::tags$span(class = "kfp-filter-chip", input$pricetype),
-      shiny::tags$span(class = "kfp-filter-chip", price_unit_label()),
-      shiny::tags$span(class = "kfp-filter-chip", county_label),
-      shiny::tags$span(class = "kfp-filter-chip", market_label),
-      shiny::tags$span(class = "kfp-filter-chip", date_label),
-      shiny::tags$span(
-        class = "kfp-filter-chip",
-        if (identical(input$calculation, "record_weighted_mean")) {
-          "Record-weighted mean"
-        } else {
-          "Balanced median"
-        }
-      )
-    )
-  })
-
-  observeEvent(input$reset_filters,
-    {
-      first_category <- sort(unique(food_prices$category))[1]
-      updateSelectInput(session, "category", selected = first_category)
-      updateSelectInput(session, "Currency", selected = "price")
-
-      reset_date_input(reset_date_input() + 1L)
-      if (!is.null(input$page1_county)) {
-        updateSelectInput(session, "page1_county", selected = "All")
-      }
-      if (!is.null(input$page1_market)) {
-        updateSelectInput(session, "page1_market", selected = "All")
-      }
-      shiny::updateRadioButtons(
-        session,
-        "calculation",
-        selected = "balanced_median"
-      )
-    },
-    ignoreInit = TRUE
-  )
+  filters <- filters_module_server("filters", food_prices = food_prices)
+  filter_fields <- filters$fields
+  selected_price_dates <- filters$selected_dates
+  price_column <- filters$price_column
+  currency_label <- filters$currency_label
+  price_unit_label <- filters$price_unit_label
+  calculation_label <- filters$calculation_label
+  calculation_short <- filters$calculation_short
+  unit_denominator <- filters$unit_denominator
+  base_filtered_data <- filters$base_data
+  filtered_data <- filters$data
 
   climate_module_server(
     "climate",
     price_data = base_filtered_data,
     price_column = price_column,
     price_unit_label = price_unit_label,
-    global_county = reactive(input$page1_county %||% "All"),
-    set_global_county = function(county) {
-      updateSelectInput(session, "page1_county", selected = county)
-    },
-    reset_focus = reactive(input$reset_filters)
+    global_county = filters$county,
+    set_global_county = filters$set_county,
+    reset_focus = filters$reset_event,
+    active = reactive(identical(input$main_nav, "Climate"))
   )
 
   price_aggregation <- reactive({
@@ -488,7 +52,7 @@ app_server <- function(input, output, session) {
     req(nrow(dt) > 0)
     aggregate_price_data(dt, 
     price_column(), 
-    input$calculation %||% "balanced_median")
+    filter_fields$calculation() %||% "balanced_median")
   })
 
   monthly_summary <- reactive({
@@ -521,12 +85,16 @@ app_server <- function(input, output, session) {
     } else {
       NA_real_
     }
-    method <- if (identical(input$calculation, "record_weighted_mean")) {
+    method <- if (identical(
+      filter_fields$calculation(), "record_weighted_mean"
+    )) {
       "Record-weighted mean"
     } else {
       "Balanced median"
     }
-    method_note <- if (identical(input$calculation, "record_weighted_mean")) {
+    method_note <- if (identical(
+      filter_fields$calculation(), "record_weighted_mean"
+    )) {
       paste(
         "Each market-month mean contributes in proportion to its records;",
         "the record weights carry through county and selected-area means."
@@ -557,7 +125,7 @@ app_server <- function(input, output, session) {
           currency_label(),
           format_number(latest_row$mean_price, 2)
         )),
-        tags$span(paste("per", tolower(input$unit)))
+        tags$span(paste("per", tolower(filter_fields$unit())))
       ),
       div(class = "kfp-overview-method", method),
       div(
@@ -720,7 +288,7 @@ app_server <- function(input, output, session) {
       ,
       .(
         Estimate = if (
-          identical(input$calculation, "record_weighted_mean")
+          identical(filter_fields$calculation(), "record_weighted_mean")
         ) {
           stats::weighted.mean(estimate, records)
         } else {
@@ -758,7 +326,7 @@ app_server <- function(input, output, session) {
       .(
         County = county[which.max(year_month_date)],
         Estimate = if (
-          identical(input$calculation, "record_weighted_mean")
+          identical(filter_fields$calculation(), "record_weighted_mean")
         ) {
           stats::weighted.mean(estimate, records)
         } else {
@@ -783,37 +351,14 @@ app_server <- function(input, output, session) {
   })
 
   trend_summary <- reactive({
-    monthly <- data.table::copy(monthly_summary())
+    monthly <- monthly_summary()
     req(nrow(monthly) > 0, input$trend_frequency)
 
-    if (identical(input$trend_frequency, "quarter")) {
-      summary <- quarterly_trend_data(monthly)
-      step <- "3 months"
-    } else {
-      summary <- monthly[
-        ,
-        .(
-          period = year_month_date,
-          mean_price, observations, counties, markets,
-          covered_months = as.integer(is.finite(mean_price))
-        )
-      ]
-      step <- "month"
-    }
-
-    all_periods <- data.table::data.table(
-      period = seq(min(summary$period), max(summary$period), by = step)
+    prepare_trend_series(
+      monthly = monthly,
+      frequency = input$trend_frequency,
+      display = input$trend_display
     )
-    summary <- merge(
-      all_periods, summary, by = "period", all.x = TRUE, sort = TRUE
-    )
-    summary[, display_price := mean_price]
-    if (identical(input$trend_display, "smooth")) {
-      summary[, display_price := data.table::frollmean(
-        mean_price, n = 3L, align = "right", fill = NA_real_
-      )]
-    }
-    summary[]
   })
 
   trend_panel_open <- shiny::reactiveVal(FALSE)
@@ -982,7 +527,7 @@ app_server <- function(input, output, session) {
           price_unit_label()
         )),
         tags$small(price_calculation_label(
-          input$calculation %||% "balanced_median"
+          filter_fields$calculation() %||% "balanced_median"
         ))
       ),
       div(
@@ -1144,33 +689,38 @@ app_server <- function(input, output, session) {
     }
   }, ignoreInit = TRUE)
 
-  observeEvent(input$reset_filters, {
+  observeEvent(filters$reset_event(), {
     clear_trend_selection()
   }, ignoreInit = TRUE)
 
   output$trends_context <- renderUI({
     dt <- filtered_data()
-    req(nrow(dt) > 0, input$page1_county, input$page1_market)
+    req(nrow(dt) > 0, filter_fields$county(), filter_fields$market())
 
     last_date <- max(dt$date, na.rm = TRUE)
-    location <- if (!identical(input$page1_county, "All")) {
-      paste0(input$page1_county, " county")
+    location <- if (!identical(filter_fields$county(), "All")) {
+      paste0(filter_fields$county(), " county")
     } else {
       "Available markets in Kenya"
     }
 
-    if (!identical(input$page1_market, "All")) {
-      location <- paste(location, "-", input$page1_market)
+    if (!identical(filter_fields$market(), "All")) {
+      location <- paste(location, "-", filter_fields$market())
     }
 
     estimator <- price_calculation_label(
-      input$calculation %||% "balanced_median"
+      filter_fields$calculation() %||% "balanced_median"
     )
 
     shiny::tags$div(
       class = "kfp-trends-context",
       shiny::tags$strong(
-        paste(input$commodity, input$pricetype, input$unit, sep = " | ")
+        paste(
+          filter_fields$commodity(),
+          filter_fields$pricetype(),
+          filter_fields$unit(),
+          sep = " | "
+        )
       ),
       shiny::tags$span(paste(" | Selected estimator:", estimator)),
       shiny::tags$span(paste(" | ", location, " | As of", format(last_date, "%b %Y"))),
@@ -1226,7 +776,7 @@ app_server <- function(input, output, session) {
 
   output$trend_scope_note <- renderUI({
     method <- price_calculation_label(
-      input$calculation %||% "balanced_median"
+      filter_fields$calculation() %||% "balanced_median"
     )
     period <- if (identical(input$trend_frequency, "quarter")) {
       "Quarterly points average the available monthly estimates;"
@@ -1254,7 +804,7 @@ app_server <- function(input, output, session) {
         "Monthly values use "
       },
       price_calculation_label(
-        input$calculation %||% "balanced_median"
+        filter_fields$calculation() %||% "balanced_median"
       ),
       " (", price_unit_label(), "). Change requires consecutive",
       " periods; gaps and missing comparisons are shown as blank."
@@ -1306,7 +856,7 @@ app_server <- function(input, output, session) {
     ))
 
     method <- price_calculation_short_label(
-      input$calculation %||% "balanced_median"
+      filter_fields$calculation() %||% "balanced_median"
     )
     quarterly <- identical(input$trend_frequency, "quarter")
     smoothed <- identical(input$trend_display, "smooth")
@@ -1598,21 +1148,21 @@ app_server <- function(input, output, session) {
     ]
     req(nrow(dt) > 0)
 
-    if (!identical(input$page1_market, "All")) {
+    if (!identical(filter_fields$market(), "All")) {
       benchmark <- base_filtered_data()[
         is.finite(get(price_val)) & !is.na(county) & !is.na(market)
       ]
-      if (!identical(input$page1_county, "All")) {
-        benchmark <- benchmark[county == input$page1_county]
+      if (!identical(filter_fields$county(), "All")) {
+        benchmark <- benchmark[county == filter_fields$county()]
       }
-      scope <- if (identical(input$page1_county, "All")) {
+      scope <- if (identical(filter_fields$county(), "All")) {
         "All available markets"
       } else {
-        paste("All available markets in", input$page1_county)
+        paste("All available markets in", filter_fields$county())
       }
       comparison <- data.table::rbindlist(list(
         data.table::data.table(
-          location = input$page1_market,
+          location = filter_fields$market(),
           mean_price = mean(dt[[price_val]]),
           records = nrow(dt),
           covered_months = data.table::uniqueN(
@@ -1633,7 +1183,7 @@ app_server <- function(input, output, session) {
         )
       ))
     } else {
-      grouping <- if (!identical(input$page1_county, "All") ||
+      grouping <- if (!identical(filter_fields$county(), "All") ||
         data.table::uniqueN(dt$county) == 1L) {
         "market"
       } else {
@@ -1745,7 +1295,7 @@ app_server <- function(input, output, session) {
     summary <- monthly[
       ,
       .(
-        avg_price = if (identical(input$calculation,
+        avg_price = if (identical(filter_fields$calculation(),
          "record_weighted_mean")) stats::weighted.mean(estimate,
           records) else stats::median(estimate),
         latest_date = max(year_month_date),
@@ -1760,10 +1310,10 @@ app_server <- function(input, output, session) {
   output$price_map <- ggiraph::renderGirafe({
     market_price_map(
       map_df = map_data(),
-      counties = app_counties(),
+      counties = app_display_counties(),
       price_unit = price_unit_label(),
       currency = currency_label(),
-      calculation = input$calculation %||% "balanced_median",
+      calculation = filter_fields$calculation() %||% "balanced_median",
       period_label = paste(
         format(selected_price_dates()[1L], "%b %Y"),
         format(selected_price_dates()[2L], "%b %Y"),
@@ -1830,12 +1380,15 @@ app_server <- function(input, output, session) {
   })
 
   output$compare_commodities_ui <- renderUI({
-    req(input$category, input$unit, input$pricetype, input$page1_date)
+    req(
+      filter_fields$category(), filter_fields$unit(),
+      filter_fields$pricetype(), filter_fields$dates()
+    )
     price_dates <- selected_price_dates()
     dt <- food_prices[
-      category == input$category &
-        unit == input$unit &
-        pricetype == input$pricetype &
+      category == filter_fields$category() &
+        unit == filter_fields$unit() &
+        pricetype == filter_fields$pricetype() &
         data.table::between(date, price_dates[1L], price_dates[2L])
     ]
     shiny::validate(shiny::need(nrow(dt) > 0, "No commodities are available for this selection."))
@@ -1911,15 +1464,18 @@ app_server <- function(input, output, session) {
   })
 
   output$commodity_compare_plot <- ggiraph::renderGirafe({
-    req(input$compare_commodities, input$category, input$unit,
-        input$pricetype, input$page1_date)
+    req(
+      input$compare_commodities, filter_fields$category(),
+      filter_fields$unit(), filter_fields$pricetype(),
+      filter_fields$dates()
+    )
     price_val <- price_column()
     price_dates <- selected_price_dates()
     dt <- food_prices[
-      category == input$category &
+      category == filter_fields$category() &
         commodity %in% input$compare_commodities &
-        unit == input$unit &
-        pricetype == input$pricetype &
+        unit == filter_fields$unit() &
+        pricetype == filter_fields$pricetype() &
         data.table::between(date, price_dates[1L], price_dates[2L])
     ]
     shiny::validate(shiny::need(nrow(dt) > 1, "Select commodities with available data for the current unit and price type."))
@@ -1983,7 +1539,10 @@ app_server <- function(input, output, session) {
       kpi_card("Counties", format_number(uniqueN(dt$county, na.rm = TRUE)), "covered"),
       kpi_card("Markets", format_number(uniqueN(dt$market, na.rm = TRUE)), "covered"),
       kpi_card("Missing county", format_number(sum(is.na(dt$county))), "records"),
-      kpi_card("Latest record", as.character(max(dt$date, na.rm = TRUE)), input$commodity)
+      kpi_card(
+        "Latest record", as.character(max(dt$date, na.rm = TRUE)),
+        filter_fields$commodity()
+      )
     )
   })
 

@@ -12,94 +12,6 @@
 #' @noRd
 #'
 
-filter_panel <- function() {
-  food_prices <- app_food_prices()
-
-  div(
-    class = "kfp-filter-band",
-    tags$details(
-      id = "kfp-main-filters",
-      class = "kfp-main-filters",
-      `data-kfp-remember` = "true",
-      open = "open",
-      tags$summary("Filters"),
-      fluidRow(
-        shiny::column(3, uiOutput("commodity_ui")),
-        shiny::column(3, uiOutput("pricetype_ui")),
-        shiny::column(3, uiOutput("page1_county_ui")),
-        shiny::column(3, uiOutput("page_year_ui"))
-      )
-    ),
-    tags$details(
-      id = "kfp-advanced-filters",
-      class = "kfp-advanced-filters",
-      `data-kfp-remember` = "true",
-      tags$summary("More filters"),
-      fluidRow(
-        shiny::column(
-          3,
-          shiny::selectInput(
-            "category",
-            "Category",
-            choices = sort(unique(food_prices$category))
-          )
-        ),
-        shiny::column(3, uiOutput("page1_market_ui")),
-        shiny::column(3, uiOutput("unit_ui")),
-        shiny::column(
-          3,
-          shiny::selectInput(
-            "Currency",
-            "Currency",
-            c("KES" = "price", "USD" = "usdprice")
-          )
-        )
-      ),
-      fluidRow(
-        shiny::column(
-          12,
-          div(
-            class = "kfp-calculation-control",
-            radioButtons(
-              "calculation",
-              "Calculation",
-              choices = price_calculation_choices(),
-              selected = "balanced_median",
-              inline = TRUE
-            )
-          )
-        )
-      )
-    ),
-    div(
-      class = "kfp-filter-footer",
-      tags$span(class = "kfp-filter-scope", "Applies to: price panels"),
-      uiOutput("filter_context"),
-      shiny::actionButton(
-        "reset_filters",
-        "Reset filters",
-        class = "kfp-reset-button"
-      )
-    )
-  )
-}
-
-plot_panel <- function(title, output, footer = NULL) {
-  div(
-    class = "kfp-panel",
-    h4(title),
-    output,
-    footer
-  )
-}
-
-visualization_frame <- function(output, size = "standard") {
-  div(
-    class = paste("kfp-viz-frame", paste0("kfp-viz-", size)),
-    output
-  )
-}
-
 app_ui <- function(request) {
   tagList(
     golem_add_external_resources(),
@@ -120,7 +32,7 @@ app_ui <- function(request) {
       navbarPage(
         title = "Kenya Food Prices Dashboard",
         id = "main_nav",
-        header = filter_panel(),
+        header = filters_module_ui("filters"),
         tabPanel(
           "Overview",
           fluidPage(
