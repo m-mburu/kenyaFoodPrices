@@ -53,6 +53,20 @@ app_counties <- function() {
   .app_data_cache$kenya_counties
 }
 
+# Lightweight national map geometry, separate from analytical boundaries.
+app_display_counties <- function() {
+  if (!exists("kenya_counties_display", envir = .app_data_cache,
+              inherits = FALSE)) {
+    utils::data(
+      "kenya_counties_display",
+      package = "kenyaFoodPrices",
+      envir = .app_data_cache
+    )
+  }
+
+  .app_data_cache$kenya_counties_display
+}
+
 # Normalise a county name for matching (lowercase, strip punctuation/spaces).
 county_name_key <- function(x) {
   gsub("[^a-z0-9]", "", tolower(trimws(x)))

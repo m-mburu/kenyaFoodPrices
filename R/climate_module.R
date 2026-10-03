@@ -58,7 +58,7 @@ climate_module_ui <- function(id) {
           "Rainfall conditions",
           shinycssloaders::withSpinner(
             visualization_frame(
-              ggiraph::girafeOutput(ns("rainfall_map"), height = "100%"),
+              leaflet::leafletOutput(ns("rainfall_map"), height = "100%"),
               "climate-map"
             ),
             color = "#00a2ab"
@@ -71,7 +71,7 @@ climate_module_ui <- function(id) {
           "Vegetation greenness",
           shinycssloaders::withSpinner(
             visualization_frame(
-              ggiraph::girafeOutput(ns("vegetation_map"), height = "100%"),
+              leaflet::leafletOutput(ns("vegetation_map"), height = "100%"),
               "climate-map"
             ),
             color = "#00a2ab"
@@ -193,14 +193,17 @@ climate_module_server <- function(
   price_unit_label,
   global_county = NULL,
   set_global_county = NULL,
-  reset_focus = NULL
+  reset_focus = NULL,
+  active = NULL
 ) {
   shiny::moduleServer(id, function(input, output, session) {
     climate <- app_climate()
     climate_monthly <- climate$county_monthly
     subcounty_monthly <- climate$subcounty_monthly
     county_lookup <- climate$county_lookup
-    county_geometry <- prepare_climate_geometry(app_counties(), county_lookup)
+    county_geometry <- prepare_climate_geometry(
+      app_display_counties(), county_lookup
+    )
 
     available_dates <- sort(unique(climate_monthly$date))
     month_choices <- stats::setNames(
@@ -304,6 +307,11 @@ climate_module_server <- function(
             )
           }
         ),
+        if (!is.null(focus_detail()$status)) {
+          shiny::tags$p(
+            class = "kfp-panel-note", focus_detail()$status
+          )
+        },
         shiny::actionButton(
           session$ns("back_to_kenya"),
           "All Kenya",
@@ -335,12 +343,18 @@ climate_module_server <- function(
         name_col <- "NAME_2"
       }
       if (is.null(layer)) {
-        return(list(sf = NULL, name_col = NULL))
+        return(list(
+          sf = NULL, name_col = NULL,
+          status = "Local reference boundaries are unavailable."
+        ))
       }
 
       subset <- layer[layer$county_key == ckey, ]
       if (nrow(subset) == 0) {
-        return(list(sf = NULL, name_col = NULL))
+        return(list(
+          sf = NULL, name_col = NULL,
+          status = "No reference boundaries match this county."
+        ))
       }
       list(sf = subset, name_col = name_col)
     })
@@ -397,53 +411,14 @@ climate_module_server <- function(
       map_sf
     })
 
-    render_climate_map <- function(type) {
-      local_values <- !identical(input$county, "All") &&
-        identical(value_level(), "subcounty")
-      map_sf <- if (local_values) subcounty_values() else map_values()
-      source_values <- if (local_values) {
-        subcounty_monthly
-      } else {
-        climate_monthly
-      }
-      condition_view <- identical(input$map_measure, "condition")
-      plot <- climate_map_plot(
-        map_sf = map_sf,
-        type = type,
-        condition_view = condition_view,
-        selected_date = selected_date(),
-        climate_monthly = source_values,
-        focus_bounds = focus_bounds(),
-        detail_sf = focus_detail()$sf,
-        detail_name = focus_detail()$name_col,
-        area_level = if (local_values) "subcounty" else "county",
-        focus_label = selected_county_name()
-      )
-      selected <- if (!local_values &&
-                      !identical(input$county, "All")) {
-        input$county
-      } else {
-        character()
-      }
-
-      standard_girafe(
-        plot,
-        width_svg = 6.8,
-        height_svg = 6.4,
-        selectable = !local_values,
-        selected = selected
+    for (type in c("rainfall", "vegetation")) {
+      register_climate_leaflet(
+        paste0(type, "_map"), type, input, output, session,
+        county_geometry, map_values, subcounty_values, selected_date,
+        selected_county_name, value_level, detail_level, focus_detail,
+        focus_bounds, climate_monthly, subcounty_monthly, active
       )
     }
-
-    output$rainfall_map <- ggiraph::renderGirafe({
-      shiny::req(input$map_measure)
-      render_climate_map("rainfall")
-    })
-
-    output$vegetation_map <- ggiraph::renderGirafe({
-      shiny::req(input$map_measure)
-      render_climate_map("vegetation")
-    })
 
     select_clicked_county <- function(selected) {
       if (length(selected) != 1L ||
@@ -486,13 +461,27 @@ climate_module_server <- function(
       }, ignoreInit = TRUE)
     }
 
-    # ggiraph reports selections when a map widget is rebuilt. Only real
-    # polygon clicks should change the focused county.
-    shiny::observeEvent(
-      input$map_clicked,
-      select_clicked_county(input$map_clicked),
-      ignoreInit = TRUE
-    )
+    # Leaflet click IDs are canonical county codes; local/detail IDs are
+    # deliberately ignored by the shared selection handler.
+    shiny::observeEvent(input$rainfall_map_shape_click, {
+      select_clicked_county(input$rainfall_map_shape_click$id)
+    }, ignoreInit = TRUE)
+    shiny::observeEvent(input$vegetation_map_shape_click, {
+      select_clicked_county(input$vegetation_map_shape_click$id)
+    }, ignoreInit = TRUE)
+    shiny::observeEvent(input$county, {
+      if (is.function(set_global_county)) {
+        target <- if (identical(input$county, "All")) {
+          "All"
+        } else {
+          selected_county_name()
+        }
+        if (!is.function(global_county) ||
+            !identical(global_county(), target)) {
+          set_global_county(target)
+        }
+      }
+    }, ignoreInit = TRUE)
 
     output$climate_summary <- shiny::renderUI({
       values <- climate_monthly[date == selected_date()]

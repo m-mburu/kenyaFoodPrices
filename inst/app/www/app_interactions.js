@@ -61,18 +61,14 @@
 
   function initDetailsState() {
     const phone = window.matchMedia("(max-width: 768px)");
-    restoreDetailsState(
-      document.getElementById("kfp-main-filters"),
-      !phone.matches
-    );
-    restoreDetailsState(document.getElementById("kfp-advanced-filters"));
-
     document.querySelectorAll("details[data-kfp-remember]").forEach(function (
       node
     ) {
-      if (node.id !== "kfp-main-filters" && node.id !== "kfp-advanced-filters") {
-        restoreDetailsState(node);
-      }
+      // Roles work with any module namespace; storage remains per instance ID.
+      const defaultOpen = node.dataset.kfpFilterRole === "main"
+        ? !phone.matches
+        : undefined;
+      restoreDetailsState(node, defaultOpen);
     });
   }
 
@@ -107,30 +103,6 @@
         scheduleDataTableAdjust();
       }
     }, true);
-
-    document.addEventListener("click", function (event) {
-      if (!(event.target instanceof Element)) {
-        return;
-      }
-
-      const polygon = event.target.closest("path[data-id]");
-      if (!polygon) {
-        return;
-      }
-
-      const output = polygon.closest(
-        '[id$="-rainfall_map"], [id$="-vegetation_map"]'
-      );
-      const match = output && output.id.match(/^(.+)-(rainfall|vegetation)_map$/);
-      const countyId = polygon.getAttribute("data-id");
-      if (!match || !/^KE\d{3}$/.test(countyId) || !window.Shiny) {
-        return;
-      }
-
-      Shiny.setInputValue(match[1] + "-map_clicked", countyId, {
-        priority: "event"
-      });
-    });
 
     document.addEventListener("keydown", function (event) {
       if (event.key !== "Escape" || !window.Shiny) {
