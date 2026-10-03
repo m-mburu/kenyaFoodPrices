@@ -446,6 +446,14 @@ div.quarto-post h3 a {
   font-size: 14px;
 }
 
+/* Keep hover details as readable as popups, with room on narrow phones. */
+.kfp-climate-tooltip {
+  box-sizing: border-box;
+  width: 280px;
+  max-width: min(280px, calc(100vw - 100px));
+  overflow-wrap: anywhere;
+}
+
 .kfp-viz-wide {
   height: clamp(300px, 32vw, 410px);
 }
