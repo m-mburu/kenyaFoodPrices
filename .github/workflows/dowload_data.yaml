@@ -15,6 +15,9 @@ jobs:
   Download-data-Compile-Commit:
     if: ${{ github.event_name != 'push' || !startsWith(github.event.head_commit.message, 'automatic updates') }}
     runs-on: ubuntu-24.04
+    environment:
+      name: shinyapps.io
+      url: https://mmburu.shinyapps.io/kenyaFoodPrices/
     env:
       TZ: "Africa/Nairobi"
     steps:
