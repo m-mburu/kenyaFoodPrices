@@ -89,6 +89,12 @@ build_kenya_climate <- function(work_dir = tempfile("kenya-climate-")) {
   )
 
   climate_adm2 <- prepare_jmr_climate(jmr_data, pcodes)
+  # Upstream releases vary in stored precision. Rounding the ADM2 measures
+  # before aggregation keeps the packaged file small while leaving county means
+  # reproducible from the sub-county rows (tests assert this) and displayed
+  # values unaffected: panels show at most 3 decimals.
+  measures <- c("rainfall_mm", "rainfall_z", "ndvi", "ndvi_z")
+  climate_adm2[, (measures) := lapply(.SD, round, 4L), .SDcols = measures]
   county_monthly <- aggregate_climate_to_county(climate_adm2)
   subcounty_monthly <- climate_adm2[
     ,
@@ -152,6 +158,15 @@ stopifnot(
   min(kenya_climate$county_monthly$ndvi, na.rm = TRUE) >= -1,
   max(kenya_climate$county_monthly$ndvi, na.rm = TRUE) <= 1,
   min(kenya_climate$county_monthly$rainfall_mm, na.rm = TRUE) >= 0
+)
+
+# A refresh can succeed while the upstream release is unchanged. Report the
+# coverage so a stalled feed is visible in the workflow log instead of passing
+# silently.
+message(
+  "Climate coverage: ", format(kenya_climate$metadata$data_start, "%b %Y"),
+  " to ", format(kenya_climate$metadata$data_end, "%b %Y"),
+  " (source release ", format(kenya_climate$metadata$source_version), ")"
 )
 
 usethis::use_data(kenya_climate, overwrite = TRUE, compress = "xz")

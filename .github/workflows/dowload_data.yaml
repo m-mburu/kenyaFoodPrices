@@ -6,7 +6,10 @@ on:
     branches:
       - main
   schedule:
-    - cron: '0 0 1 * *'  # Runs day 1 in month
+    # The JMR publishes Kenya updates around the 19th-27th of each month, so a
+    # day-1 run reads the previous release. Run mid-month and late-month to
+    # pick up the new release without waiting another month.
+    - cron: '0 6 15,25 * *'
 
 permissions:
   contents: write
