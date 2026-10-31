@@ -3,15 +3,19 @@ test_that("Leaflet styles retain source values and missing conditions", {
   areas <- prepare_climate_geometry(
     app_display_counties(), climate$county_lookup
   )
-  observations <- climate$county_monthly[date == as.Date("2026-08-01")]
+  missing_month <- max(climate$county_monthly$date)
+  observations <- climate$county_monthly[date == missing_month]
   for (field in c("rainfall_mm", "rainfall_z", "ndvi", "ndvi_z")) {
     areas[[field]] <- observations[[field]][
       match(areas$adm1_pcode, observations$adm1_pcode)
     ]
   }
+  # Force a missing vegetation value so the test does not depend on which month
+  # the upstream feed happens to omit.
+  areas$ndvi[] <- NA_real_
   original <- areas
   style <- climate_leaflet_style(
-    areas, "vegetation", FALSE, as.Date("2026-08-01"),
+    areas, "vegetation", FALSE, missing_month,
     climate$county_monthly
   )
   expect_identical(areas, original)
@@ -22,7 +26,7 @@ test_that("Leaflet styles retain source values and missing conditions", {
     grepl(paste0("Assessment: ", climate_condition(areas$ndvi_z[index])),
           style$labels[index], fixed = TRUE)
   }, logical(1))))
-  expect_true(all(grepl("August 2026", style$labels)))
+  expect_true(all(grepl(format(missing_month, "%B %Y"), style$labels)))
   local <- prepare_subcounty_map_values(
     app_cod_subcounties(),
     climate$subcounty_monthly[date == as.Date("2026-07-01")], "KE001"

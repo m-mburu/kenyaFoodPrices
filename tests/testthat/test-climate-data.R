@@ -42,10 +42,19 @@ test_that("ADM2 climate rows reconstruct the packaged county estimates", {
   counties <- climate$county_monthly
 
   expect_equal(data.table::uniqueN(areas$adm2_pcode), 290L)
-  expect_equal(data.table::uniqueN(areas$date), 200L)
+  # ADM2 and county tables must cover the same months; asserting a fixed month
+  # count would need editing on every data refresh.
+  expect_equal(
+    data.table::uniqueN(areas$date),
+    data.table::uniqueN(counties$date)
+  )
   expect_true(all(
     areas[, .N, by = date]$N == 290L
   ))
+  expect_equal(
+    sort(unique(areas$date)),
+    seq(min(areas$date), max(areas$date), by = "month")
+  )
   expect_equal(
     data.table::uniqueN(areas$adm1_pcode),
     47L
@@ -103,10 +112,13 @@ test_that("COD polygons join to distinct ADM2 values without filling gaps", {
   )
   expect_true(data.table::uniqueN(mombasa$rainfall_mm) > 1L)
 
-  august <- areas[date == as.Date("2026-08-01")]
+  # The join must not fill a missing source measurement. Build the gap
+  # explicitly so the test does not depend on which month the feed omits.
+  with_gap <- data.table::copy(areas[date == max(date)])
+  with_gap[, ndvi := NA_real_]
   local <- prepare_subcounty_map_values(
     boundaries,
-    august,
+    with_gap,
     "KE001"
   )
   expect_true(all(is.na(local$ndvi)))

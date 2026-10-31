@@ -42,11 +42,17 @@ The pipeline performs the following repeatable steps:
    ADM2 and calendar month so the condition scores remain seasonally
    comparable.
 6. Join and validate all 290 ADM2 P-codes.
-7. Summarise ADM2 indicators to all 47 counties using an unweighted mean and
+7. Round the four ADM2 measures to 4 decimal places. This bounds the packaged
+   file size (upstream releases vary in stored precision) and, because it
+   happens before aggregation, county means stay reproducible from the
+   sub-county rows. Displayed values use at most 3 decimals.
+8. Summarise ADM2 indicators to all 47 counties using an unweighted mean and
    retain coverage counts.
-8. Store source URLs, source version, coverage dates, processing description,
+9. Store source URLs, source version, coverage dates, processing description,
    and model details alongside the values.
-9. Validate ranges and county coverage before saving the package dataset.
+10. Validate ranges and county coverage before saving the package dataset, and
+    print the resulting coverage so a stalled upstream feed shows in the
+    workflow log.
 
 The county mean is an overview statistic, not an area-weighted physical
 estimate. This is stated in the application metadata. ADM2 values remain the
@@ -58,14 +64,20 @@ To refresh the packaged data from the project root:
 source("data-raw/climate_dataset.R")
 ```
 
+The `dowload_data.yaml` workflow refreshes this data automatically. It runs on
+days 15 and 25 of each month, because the JMR publishes Kenya updates around
+the 19th–27th. A day-1 run would read the previous release and could report
+success while covering data that is two months old.
+
 ## Shiny data structure
 
-The resulting `data/kenya_climate.rda` is approximately 116 KB and contains a
+The resulting `data/kenya_climate.rda` is approximately 660 KB and contains a
 single list named `kenya_climate`:
 
 | Element | Structure | Purpose |
 |---|---|---|
-| `county_monthly` | `data.table`, 9,259 rows | Map and trend values for 47 counties, January 2010–May 2026 |
+| `county_monthly` | `data.table`, 9,447 rows | Map and trend values for 47 counties, January 2010–September 2026 |
+| `subcounty_monthly` | `data.table`, 58,290 rows | ADM2 source values for focused county maps |
 | `county_lookup` | `data.table`, 47 rows | ADM1 P-code and normalized county-name joins |
 | `model_details` | `data.table` | JMR rainfall/NDVI transformations and thresholds |
 | `metadata` | named list | Source, version, coverage and processing provenance |
