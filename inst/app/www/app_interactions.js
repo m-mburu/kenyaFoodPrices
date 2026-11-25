@@ -109,16 +109,16 @@
         return;
       }
 
-      const panel = document.getElementById("trend_selection_panel");
       const active = document.activeElement;
+      const trends = active instanceof Element
+        ? active.closest(".kfp-trends")
+        : null;
+      const panel = trends?.querySelector("[data-kfp-escape-input]");
       if (!panel || panel.offsetParent === null) {
         return;
       }
-      if (active instanceof Element && !active.closest(".kfp-trends")) {
-        return;
-      }
 
-      Shiny.setInputValue("trend_selection_escape", Date.now(), {
+      Shiny.setInputValue(panel.dataset.kfpEscapeInput, Date.now(), {
         priority: "event"
       });
     });
@@ -146,7 +146,9 @@
 
       window.requestAnimationFrame(function () {
         const target = document.getElementById(message.id);
-        if (target && typeof target.focus === "function") {
+        if (target?.selectize) {
+          target.selectize.focus();
+        } else if (target && typeof target.focus === "function") {
           target.focus();
         }
       });

@@ -1,5 +1,40 @@
 # Modularisation implementation plan
 
+## Where to look
+
+The app files connect shared filters and price summaries to the tab modules.
+Each tab file contains its UI and the server code that turns its inputs into
+outputs. [Tab layout](../R/app_ui.R) · [Module connections](../R/app_server.R)
+
+| Maintainer question | Where to start |
+| --- | --- |
+| Which records contribute to the annual Coverage chart and table? | Follow the `price_records` input and `summarise_annual_coverage()` in [Coverage](../R/coverage_module.R). Both outputs read one row per observed year. |
+| How is the latest price estimated? | Follow `aggregate_price_data()` and `summarise_monthly_prices()` in [price helpers](../R/price_helpers.R), then look at the headline in [Overview](../R/overview_module.R). |
+| Why can Compare show several commodities? | Follow `commodity_comparison_records` in [the app server](../R/app_server.R) into [Compare](../R/compare_module.R). Category, unit, price type and dates define the available choices. |
+| How do smoothing and period selection work? | Start with `prepare_trend_series()` in [trend helpers](../R/trend_helpers.R). The [Trends module](../R/trends_module.R) handles selection and the [browser script](../inst/app/www/app_interactions.js) sends Escape to the module. |
+| Why is a climate month missing? | Use the steps below to check the source, the packaged data and the app in order. |
+
+To reproduce the Coverage counts outside Shiny, load the checkout with
+`pkgload::load_all(".")` and call `summarise_annual_coverage()` on the
+observation records you want to count. Apply the same commodity, unit,
+price type, dates, county and market as the app to reproduce a filtered view.
+
+### Trace a missing climate month
+
+1. Check the World Bank JMR ZIP for the observation month. The source file's
+   publication date is recorded as `source_version`.
+   [World Bank source listing](https://microdata.worldbank.org/api/downloads/KEN_2010-2025_JMR_v01_M/files?type=data)
+2. Check `metadata$data_end` in the packaged climate dataset for the latest
+   observation month. Read `metadata$created_at` for the time the refresh
+   script built that copy. The GitHub Actions run records when the app refresh
+   deployed it. [Refresh script](../data-raw/climate_dataset.R) · [Packaged
+   data](../data/kenya_climate.rda) · [Deployment workflow](../.github/workflows/dowload_data.yaml)
+3. Compare the packaged month with the latest option in the running app.
+   The Climate module builds the selector from the dates in its loaded county
+   dataset. [Data loader](../R/app_data.R) · [Climate module](../R/climate_module.R)
+
+## Original review
+
 Reviewed on 3 October 2026 against checkout `cf44513`.
 
 ## Recommendation and scope

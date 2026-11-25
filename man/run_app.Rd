@@ -36,6 +36,10 @@ expression in order for the match to be considered successful.}
 \item{...}{arguments to pass to golem_opts.
 See `?golem::get_golem_options` for more details.}
 }
+\value{
+A Shiny application object configured with the dashboard UI and
+  server.
+}
 \description{
 Run the Shiny Application
 }

@@ -54,28 +54,6 @@ test_that("climate choropleths render without raster dependencies", {
   expect_equal(nrow(vegetation$data), 47L)
 })
 
-test_that("market map renders as a girafe widget", {
-  markets <- data.table::data.table(
-    market = "Nairobi",
-    county = "Nairobi",
-    latitude = -1.2864,
-    longitude = 36.8172,
-    avg_price = 100,
-    latest_date = as.Date("2026-01-01"),
-    covered_months = 24L,
-    records = 12L
-  )
-
-  widget <- market_price_map(
-    markets,
-    counties = app_counties(),
-    price_unit = "KES/KG",
-    currency = "KES"
-  )
-
-  expect_s3_class(widget, "girafe")
-})
-
 test_that("focused maps use ADM2 identifiers and source measurements", {
   climate <- app_climate()
   observations <- climate$subcounty_monthly[

@@ -1,4 +1,12 @@
-## code to prepare `my_dataset` dataset goes here
+#' Refresh Kenya food-price observations from WFP via HDX
+#'
+#' Run from the package root. The script reads the first resource in the
+#' Kenya price dataset, prepares calendar fields and commodity names, and
+#' joins geocoded observations to county polygons.
+#'
+#' @return Writes the price observations, county polygons and coordinate-to-
+#'   county lookup under data/ for the app and package.
+#' @noRd
 
 
 library(rhdx)
@@ -19,6 +27,12 @@ ke_food_prices <- pull_dataset("wfp-food-prices-for-kenya") %>%
 
 
 # Function to create unique identifiers for GPS coordinates
+#' Assign a shared identifier to equal coordinate pairs
+#'
+#' @param data Food-price records with longitude and latitude columns.
+#' @return Updates the input data.table by reference with unique_id and removes
+#'   the temporary coordinate key.
+#' @noRd
 create_unique_ids <- function(data) {
   # Create a combined column of longitude and latitude
   data[, coord := paste(longitude, latitude, sep = "_")]
@@ -114,6 +128,15 @@ if (is.na(sf::st_crs(kenya_counties))) {
 }
 
 # Function to assign counties to GPS coordinates
+#' Match distinct price observation coordinates to county boundaries
+#'
+#' @param data_points Price records or locations with unique_id and WGS84
+#'   longitude and latitude.
+#' @param counties_sf County polygons with a county name column and a defined
+#'   coordinate system.
+#' @return An sf lookup containing county and unique_id, with unmatched
+#'   coordinates retaining a missing county.
+#' @noRd
 assign_counties <- function(data_points, counties_sf) {
   # Convert data points to an sf object
   data_points_sf <- data_points %>%

@@ -1,5 +1,9 @@
 # Shared price aggregation and coverage contracts.
 
+#' List the price estimators available in the filter controls
+#'
+#' @return A named character vector of display labels and estimator keys.
+#' @noRd
 price_calculation_choices <- function() {
   c(
     "Balanced median" = "balanced_median",
@@ -7,6 +11,12 @@ price_calculation_choices <- function() {
   )
 }
 
+#' Describe the selected estimator in method and filter text
+#'
+#' @param calculation Estimator key.
+#' @return A full estimator label. Unrecognised keys use the balanced-median
+#'   label.
+#' @noRd
 price_calculation_label <- function(calculation) {
   switch(
     calculation,
@@ -18,6 +28,12 @@ price_calculation_label <- function(calculation) {
 
 # Short estimator name for axis titles, legends and table headings where the
 # full aggregation description would be too long.
+#' Label price estimates in axes, legends and tables
+#'
+#' @param calculation Estimator key.
+#' @return A short median or mean label, or a generic price estimate label for
+#'   an unrecognised key.
+#' @noRd
 price_calculation_short_label <- function(calculation) {
   switch(
     calculation,
@@ -27,6 +43,19 @@ price_calculation_short_label <- function(calculation) {
   )
 }
 
+#' Estimate monthly prices at market, county and national levels
+#'
+#' @param data Observation records with month, county and market fields. Rows
+#'   lacking geography or month and rows with non-finite prices are omitted.
+#' @param price_column Name of the numeric price column.
+#' @param calculation Estimator key selecting the balanced median or
+#'   record-weighted mean.
+#' @return A list of market-month, county-month and national-month tables with
+#'   estimates in the source price units and counts at each level. The balanced
+#'   median gives market estimates equal weight within a county and county
+#'   estimates equal weight in the national summary. The mean carries
+#'   observation counts through both levels.
+#' @noRd
 aggregate_price_data <- function(data, price_column, calculation = "balanced_median") {
   stopifnot(is.character(price_column), length(price_column) == 1L)
   if (!calculation %in% unname(price_calculation_choices())) {
@@ -91,6 +120,17 @@ aggregate_price_data <- function(data, price_column, calculation = "balanced_med
   list(market_month = market_month, county_month = county_month, national_month = national_month)
 }
 
+#' Fill missing calendar months and calculate consecutive-month changes
+#'
+#' @param data Monthly estimates with one row per observed month.
+#' @param date_column Name of the column containing month-start Dates.
+#' @param value_column Name of the estimate column, in the selected currency
+#'   and physical unit.
+#' @return A sorted monthly data.table with the previous estimate, an adjacency
+#'   flag, an absolute change and a proportional change. Gaps and unavailable
+#'   estimates propagate missing changes. A zero previous estimate makes the
+#'   proportional change unavailable.
+#' @noRd
 complete_monthly_changes <- function(data, date_column = "year_month_date", value_column = "estimate") {
   dt <- data.table::as.data.table(data.table::copy(data))
   if (!nrow(dt)) return(dt)
@@ -105,6 +145,7 @@ complete_monthly_changes <- function(data, date_column = "year_month_date", valu
   dt <- merge(all_months, dt, by = date_column, all.x = TRUE, sort = TRUE)
   previous <- data.table::shift(dt[[value_column]])
   previous_date <- data.table::shift(dt[[date_column]])
+  # The index increases by one per month even across the end of a year.
   month_index <- function(x) {
     as.integer(format(x, "%Y")) * 12L + as.integer(format(x, "%m"))
   }
@@ -121,6 +162,36 @@ complete_monthly_changes <- function(data, date_column = "year_month_date", valu
   dt
 }
 
+# Add calendar gaps and consecutive-month changes to the national estimates.
+#' Prepare the shared national price series for Overview and Trends
+#'
+#' @param national_month The national-month table from aggregate_price_data().
+#' @return A monthly table with price_estimate, observations, geographic counts
+#'   and consecutive-month changes.
+#' @noRd
+summarise_monthly_prices <- function(national_month) {
+  monthly <- complete_monthly_changes(national_month)
+  if (nrow(monthly) == 0L) {
+    return(monthly)
+  }
+
+  data.table::setnames(
+    monthly,
+    c("estimate", "records"),
+    c("price_estimate", "observations")
+  )
+  monthly
+}
+
+#' Summarise the observation coverage behind a displayed price estimate
+#'
+#' @param records Number of observation records.
+#' @param markets Number of represented markets, if available.
+#' @param counties Number of represented counties, if available.
+#' @param covered_months Number of observed months, if available.
+#' @return Character labels with record counts and any available geography or
+#'   month counts.
+#' @noRd
 price_coverage_label <- function(records, markets = NA_integer_, counties = NA_integer_, covered_months = NA_integer_) {
   size <- max(length(records), length(markets), length(counties), length(covered_months))
   records <- rep_len(records, size)

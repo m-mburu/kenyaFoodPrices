@@ -1,4 +1,17 @@
 # Prepare colours and labels without altering source measurements or geometry.
+#' Prepare fill colours, labels and the legend for a climate map
+#'
+#' @param areas Polygons and joined climate values for the selected month.
+#' @param type Indicator key for rainfall or vegetation.
+#' @param condition_view Whether to show standardised condition categories.
+#' @param selected_date Observation month as a Date.
+#' @param source_values Historical measurements used to set the rainfall colour
+#'   scale.
+#' @param area_level Geographic level of the shaded measurements.
+#' @param focus_label County name shown with sub-county measurements.
+#' @return A list of area IDs, fill colours, popup text and legend settings in
+#'   polygon order.
+#' @noRd
 climate_leaflet_style <- function(
   areas, type, condition_view, selected_date, source_values,
   area_level = "county", focus_label = NULL
@@ -56,6 +69,14 @@ climate_leaflet_style <- function(
        legend = legend, title = title)
 }
 
+#' Add or replace a layer of climate value polygons
+#'
+#' @param map Leaflet widget or proxy.
+#' @param areas County or ADM2 polygons for the layer.
+#' @param style Per-polygon style and labels from climate_leaflet_style().
+#' @param group Leaflet layer group for later updates.
+#' @return The Leaflet widget or proxy with the polygon operation added.
+#' @noRd
 add_climate_leaflet_values <- function(map, areas, style, group) {
   leaflet::addPolygons(
     map, data = areas, layerId = style$ids, group = group,
@@ -72,6 +93,12 @@ add_climate_leaflet_values <- function(map, areas, style, group) {
 }
 
 # Empty widgets render once; ready events gate proxy work until they exist.
+#' Create the climate base map and signal when its proxy is ready
+#'
+#' @param bounds National bounding box ordered west, south, east and north.
+#' @return A Leaflet widget with background tiles and a browser readiness
+#'   handler.
+#' @noRd
 climate_leaflet_widget <- function(bounds) {
   map <- leaflet::leaflet(options = leaflet::leafletOptions(
     minZoom = 4, maxZoom = 14, scrollWheelZoom = FALSE,
@@ -90,6 +117,12 @@ climate_leaflet_widget <- function(bounds) {
   ))
 }
 
+#' Fit a climate map to an extent with room around its edges
+#'
+#' @param map Leaflet widget or proxy.
+#' @param bounds Geographic bounds ordered west, south, east and north.
+#' @return The Leaflet widget or proxy with the viewport operation added.
+#' @noRd
 fit_climate_leaflet_bounds <- function(map, bounds) {
   leaflet::fitBounds(
     map, bounds[1L], bounds[2L], bounds[3L], bounds[4L],
@@ -97,6 +130,16 @@ fit_climate_leaflet_bounds <- function(map, bounds) {
   )
 }
 
+#' Draw internal administrative outlines as geographic reference
+#'
+#' @param map Leaflet widget or proxy.
+#' @param detail A list with optional sf boundaries and the name of their label
+#'   column.
+#' @param area_level Geographic level of the climate estimates named in the
+#'   popup.
+#' @return The Leaflet widget or proxy, with reference outlines added when
+#'   available.
+#' @noRd
 add_climate_leaflet_detail <- function(map, detail, area_level) {
   if (is.null(detail$sf) || !nrow(detail$sf)) return(map)
   labels <- paste0(
@@ -114,6 +157,36 @@ add_climate_leaflet_detail <- function(map, detail, area_level) {
 
 # Each map retains its national layer. County changes only send local layers
 # and bounds; month/measure changes refresh values without changing extent.
+#' Register a climate map and its session-local layer updates
+#'
+#' @param map_id Local widget ID.
+#' @param type Indicator key for rainfall or vegetation.
+#' @param input Climate module inputs.
+#' @param output Climate module output bindings.
+#' @param session Climate module session for the widget proxy.
+#' @param county_geometry National county polygons.
+#' @param map_values Reactive returning county map polygons joined to monthly
+#'   values.
+#' @param subcounty_values Reactive returning focused ADM2 polygons joined to
+#'   monthly values.
+#' @param selected_date Reactive returning the selected observation month.
+#' @param selected_county_name Reactive returning the focused county display
+#'   name.
+#' @param value_level Reactive returning the level at which values are drawn.
+#' @param detail_level Reactive returning the level of the internal reference
+#'   outlines.
+#' @param focus_detail Reactive returning reference geometry and label
+#'   information.
+#' @param focus_bounds Reactive returning the active map extent.
+#' @param climate_monthly Historical county-month climate records for the
+#'   legend scale.
+#' @param subcounty_monthly Historical sub-county-month climate records for the
+#'   legend scale.
+#' @param active Optional reactive indicating whether the Climate tab is
+#'   active.
+#' @return Registers a Leaflet output and a reactive observer for proxy
+#'   updates.
+#' @noRd
 register_climate_leaflet <- function(
   map_id, type, input, output, session, county_geometry, map_values,
   subcounty_values, selected_date, selected_county_name, value_level,

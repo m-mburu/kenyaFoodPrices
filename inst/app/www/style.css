@@ -430,10 +430,6 @@ div.quarto-post h3 a {
   height: clamp(240px, 22vw, 300px);
 }
 
-.kfp-viz-map {
-  height: clamp(360px, 38vw, 500px);
-}
-
 .kfp-viz-climate-map {
   height: clamp(340px, 34vw, 460px);
 }
@@ -749,7 +745,6 @@ div.quarto-post h3 a {
 @media (max-width: 768px) {
   .kfp-filter-band details > summary { min-height: 44px; padding: 10px 0; }
   .kfp-viz-frame { height: clamp(230px, 72vw, 300px); }
-  .kfp-viz-map,
   .kfp-viz-climate-map { height: clamp(300px, 105vw, 420px); }
   .kfp-viz-wide { height: clamp(270px, 88vw, 360px); }
 }

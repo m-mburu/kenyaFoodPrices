@@ -2,6 +2,14 @@
 
 # Compact DataTable. When every row fits on one page, pagination and the
 # page-length selector are hidden so the panel shows only useful controls.
+#' Create a dashboard table with compact controls
+#'
+#' @param data Rectangular data to display.
+#' @param page_length Initial maximum number of rows per page.
+#' @param scroll_x Whether to allow horizontal scrolling inside the table.
+#' @return A DT widget. Paging controls are omitted when all rows fit on one
+#'   page.
+#' @noRd
 datatable_compact <- function(data, page_length = 8, scroll_x = TRUE) {
   page_options <- sort(unique(c(as.integer(page_length), 10L, 25L)))
   single_page <- nrow(data) <= page_length

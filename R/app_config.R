@@ -6,6 +6,7 @@
 #'
 #' @param ... character vectors, specifying subdirectory and file(s)
 #' within your package. The default, none, returns the root of the app.
+#' @return The installed path, or an empty string when the file is unavailable.
 #'
 #' @noRd
 app_sys <- function(...) {
@@ -20,6 +21,7 @@ app_sys <- function(...) {
 #' If unset, "default".
 #' @param use_parent Logical, scan the parent directory for config file.
 #' @param file Location of the config file
+#' @return The requested value from the active configuration.
 #'
 #' @noRd
 get_golem_config <- function(

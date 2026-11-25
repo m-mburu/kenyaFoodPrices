@@ -1,6 +1,15 @@
 # Geography is a separate stage: Climate consumes base records and applies
 # its own county focus, while the price pages also restrict the market.
 # Missing geography remains in All; a named location excludes unmatched rows.
+#' Apply county and market restrictions to price records
+#'
+#' @param records Records already scoped by product attributes and observation
+#'   dates.
+#' @param selected_county County names to retain, or All.
+#' @param selected_market Market names to retain, or All.
+#' @return A copied data.table with the selected geography. All retains records
+#'   whose corresponding location is missing.
+#' @noRd
 filter_price_geography <- function(records, selected_county, selected_market) {
   records <- data.table::copy(records)
   if (!identical(selected_county, "All")) {
@@ -13,6 +22,14 @@ filter_price_geography <- function(records, selected_county, selected_market) {
 }
 
 # Keep a valid selection; otherwise use the scoped default or first choice.
+#' Retain a valid selection as a control's choices change
+#'
+#' @param current Current selected value.
+#' @param choices Permitted values in display order.
+#' @param default Preferred fallback when the current value is unavailable.
+#' @return The current valid value, the valid default, the first choice, or an
+#'   empty character vector when no choice is available.
+#' @noRd
 filter_valid_choice <- function(current, choices, default = NULL) {
   if (length(current) == 1L && current %in% choices) {
     return(current)
@@ -24,6 +41,13 @@ filter_valid_choice <- function(current, choices, default = NULL) {
 }
 
 # Preserve the overlapping period; an unrelated period uses full coverage.
+#' Find the overlap between requested dates and observed coverage
+#'
+#' @param current Requested start and end dates.
+#' @param available Start and end of available observation coverage.
+#' @return A Date range restricted to the available period. Invalid or disjoint
+#'   selections use the available range.
+#' @noRd
 filter_valid_dates <- function(current, available) {
   if (!valid_price_date_range(current) ||
       current[2L] < available[1L] || current[1L] > available[2L]) {
@@ -34,6 +58,13 @@ filter_valid_dates <- function(current, available) {
 }
 
 # Establish the original filter defaults once for persistent input controls.
+#' Derive valid initial selections for the dependent price filters
+#'
+#' @param food_prices Observation-level prices used to derive the available
+#'   choices.
+#' @return A list of category, commodity, unit, price type and their observed
+#'   date range. Dates are empty if no observations have known dates.
+#' @noRd
 filter_initial_state <- function(food_prices) {
   categories <- sort(unique(food_prices$category))
   selected_category <- filter_valid_choice(NULL, categories)
@@ -61,6 +92,12 @@ filter_initial_state <- function(food_prices) {
 }
 
 # Labels remain reactive so currency/units change without rebuilding controls.
+#' Provide consistent price column names and display labels
+#'
+#' @param input Filter module inputs.
+#' @return A list of reactives for currency, denominator, estimator labels and
+#'   the selected numeric price column.
+#' @noRd
 filter_label_reactives <- function(input) {
   price_column <- shiny::reactive({
     if (identical(input$Currency, "usdprice")) "usdprice" else "price"
@@ -87,6 +124,14 @@ filter_label_reactives <- function(input) {
 }
 
 # This display consumes plain values, so it can be reused without a session.
+#' Describe the currently applied food-price filters
+#'
+#' @param selection List with the current commodity, price type, location and
+#'   calculation selections.
+#' @param price_unit Formatted currency and price denominator.
+#' @param dates Start and end of the selected observation period.
+#' @return A Shiny tag containing the active filter labels.
+#' @noRd
 filter_context_ui <- function(selection, price_unit, dates) {
   county <- if (identical(selection$county, "All")) {
     "All counties"

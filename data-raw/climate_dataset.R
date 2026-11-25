@@ -1,3 +1,13 @@
+#' Refresh the Kenya rainfall and vegetation data from the World Bank JMR
+#'
+#' Run from the package root. The script lists the Kenya release resources,
+#' downloads the observations, P-codes and indicator definitions, then checks
+#' the processed monthly data before refreshing the package dataset.
+#'
+#' @return Writes data/kenya_climate.rda with county and sub-county monthly
+#'   data, lookup tables and source and build dates.
+#' @noRd
+
 # Build the application-ready Kenya climate datasets.
 #
 # Source data contract
@@ -21,12 +31,24 @@ jmr_files_api <- sprintf(
   jmr_study_id
 )
 
+#' Check for a dependency needed by the climate refresh
+#'
+#' @param package Name of the R package required by the current step.
+#' @return Returns invisibly when the namespace is available. Stops with the
+#'   package name otherwise.
+#' @noRd
 require_prep_package <- function(package) {
   if (!requireNamespace(package, quietly = TRUE)) {
     stop("Package '", package, "' is required to refresh climate data.")
   }
 }
 
+#' Retrieve the published Kenya JMR file listing
+#'
+#' @param files_api URL of the JMR files API.
+#' @return A data.table of resource metadata with filenames and download links.
+#'   A failed or empty listing stops the refresh.
+#' @noRd
 list_jmr_files <- function(files_api = jmr_files_api) {
   require_prep_package("jsonlite")
   response <- jsonlite::fromJSON(files_api, simplifyDataFrame = TRUE)
@@ -38,6 +60,14 @@ list_jmr_files <- function(files_api = jmr_files_api) {
   data.table::as.data.table(response$files)
 }
 
+#' Download one named JMR resource into the working directory
+#'
+#' @param files File metadata returned by list_jmr_files().
+#' @param target_filename Exact resource filename to match.
+#' @param destination Local ZIP path to write.
+#' @return The matching metadata row invisibly. Writes a non-empty ZIP to
+#'   destination or stops on a missing or ambiguous resource.
+#' @noRd
 download_jmr_file <- function(files, target_filename, destination) {
   row <- files[filename == target_filename]
   if (nrow(row) != 1L) {
@@ -54,6 +84,13 @@ download_jmr_file <- function(files, target_filename, destination) {
   invisible(row)
 }
 
+#' Extract and read the single CSV in a JMR ZIP
+#'
+#' @param zip_path Path to the downloaded ZIP.
+#' @param extraction_dir Directory in which to extract the archive.
+#' @return A data.table read from the archive. Stops when the ZIP contains a
+#'   different number of CSV files.
+#' @noRd
 read_zipped_csv <- function(zip_path, extraction_dir) {
   files <- utils::unzip(zip_path, exdir = extraction_dir)
   csv_files <- files[grepl("\\.csv$", files, ignore.case = TRUE)]
@@ -65,6 +102,12 @@ read_zipped_csv <- function(zip_path, extraction_dir) {
   data.table::fread(csv_files)
 }
 
+#' Download and prepare the tables used by the Climate tab
+#'
+#' @param work_dir Working directory for downloaded and extracted source files.
+#' @return A list containing county-month and sub-county-month tables, the
+#'   county lookup, model details and release metadata.
+#' @noRd
 build_kenya_climate <- function(work_dir = tempfile("kenya-climate-")) {
   dir.create(work_dir, recursive = TRUE, showWarnings = FALSE)
   files <- list_jmr_files()

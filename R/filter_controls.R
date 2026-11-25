@@ -1,4 +1,14 @@
 # Update persistent controls from the same scoped observation subsets.
+#' Keep dependent filter choices and date bounds in sync
+#'
+#' @param input Filter module inputs.
+#' @param session Filter module session used to send input updates.
+#' @param food_prices Table of observation-level food prices.
+#' @param selected_price_dates Reactive returning the validated observation
+#'   date range.
+#' @return Registers observers that update persistent controls within the
+#'   session.
+#' @noRd
 register_filter_controls <- function(
   input, session, food_prices, selected_price_dates
 ) {
