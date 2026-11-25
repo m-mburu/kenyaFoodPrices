@@ -22,8 +22,8 @@ generate_welcome_message <- function() {
 #' This function creates a line plot of prices for a specified commodity and price type.
 #'
 #' @param mean_prices A data frame containing `year_quarter_date` and `mean_price`.
-#' @param commodity The commodity to filter the data by.
-#' @param pricetype The price type to filter the data by.
+#' @param commodity Commodity name for the plot title.
+#' @param pricetype Retail or wholesale price type for the plot title.
 #' @importFrom plotly ggplotly
 #' @return A plotly object containing the line plot.
 #' @export
@@ -53,11 +53,10 @@ line_plot_prices <- function(mean_prices, commodity, pricetype) {
 #'
 #' @importFrom lubridate with_tz
 #' @param timezone A character string specifying the timezone.
-#' @return A character string with the formatted current times.
+#' @return Prints the current times and returns NULL invisibly.
 #' @examples
 #' display_time_in_timezone("America/New_York")
 #' @export
-
 display_time_in_timezone <- function(timezone) {
 
   # Convert system time to specified timezone using lubridate::with_tz

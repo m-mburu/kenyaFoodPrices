@@ -10,7 +10,7 @@ display_time_in_timezone(timezone)
 \item{timezone}{A character string specifying the timezone.}
 }
 \value{
-A character string with the formatted current times.
+Prints the current times and returns NULL invisibly.
 }
 \description{
 This function takes a timezone as input and displays the current time in that timezone

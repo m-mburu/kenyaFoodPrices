@@ -1,5 +1,15 @@
 # Shared ggiraph configuration for interactive dashboard graphics.
 
+#' Apply the common interaction settings to a dashboard plot
+#'
+#' @param plot A ggplot with any interactive layers already defined.
+#' @param width_svg Width of the SVG drawing area in inches.
+#' @param height_svg Height of the SVG drawing area in inches.
+#' @param selectable Whether to enable single-mark selection.
+#' @param selected IDs to select when the widget first renders.
+#' @return A rescalable ggiraph widget with consistent hover and tooltip
+#'   styling.
+#' @noRd
 standard_girafe <- function(
   plot,
   width_svg,
@@ -42,91 +52,29 @@ standard_girafe <- function(
   )
 }
 
-market_price_map <- function(
-  map_df,
-  counties,
-  price_unit,
-  currency,
-  calculation = "balanced_median",
-  period_label = NULL
-) {
-  county_sf <- sf::st_as_sf(
-    data.table::copy(counties),
-    sf_column_name = "geometry"
-  )
-  county_sf <- sf::st_transform(county_sf, 4326)
-  map_df <- data.table::copy(map_df)
-  estimate_label <- price_calculation_short_label(calculation)
-  map_df$map_tooltip <- paste0(
-    "Market: ", map_df$market,
-    "\nCounty: ", map_df$county,
-    "\n", estimate_label, ": ", format_number(map_df$avg_price, 2),
-    " ", price_unit,
-    "\nLatest month: ", format(map_df$latest_date, "%b %Y"),
-    "\nCovered months: ", map_df$covered_months,
-    "\nRecords: ", map_df$records
-  )
-
-  legend_name <- paste0(estimate_label, "\n", price_unit)
-
-  plot <- ggplot2::ggplot() +
-    ggplot2::geom_sf(
-      data = county_sf,
-      fill = "#eef5f3",
-      colour = "#ffffff",
-      linewidth = 0.3
-    ) +
-    ggiraph::geom_point_interactive(
-      data = map_df,
-      ggplot2::aes(
-        x = longitude,
-        y = latitude,
-        colour = avg_price,
-        size = records,
-        tooltip = map_tooltip,
-        data_id = market
-      ),
-      alpha = 0.82,
-      stroke = 0.5
-    ) +
-    ggplot2::coord_sf(datum = NA) +
-    ggplot2::scale_colour_distiller(
-      palette = "YlOrRd",
-      direction = 1,
-      name = legend_name,
-      oob = scales::squish
-    ) +
-    ggplot2::scale_size_continuous(
-      range = c(3, 9),
-      name = "Records"
-    ) +
-    ggplot2::labs(
-      subtitle = if (!is.null(period_label)) {
-        paste0(
-          "Summarises the selected period (", period_label,
-          "); colour is the ", tolower(estimate_label),
-          ", marker size is the record count."
-        )
-      } else {
-        NULL
-      }
-    ) +
-    ggplot2::theme_void(base_size = 12) +
-    ggplot2::theme(
-      legend.position = "bottom",
-      plot.subtitle = ggplot2::element_text(colour = "#536868", size = 11),
-      plot.margin = ggplot2::margin(8, 8, 8, 8)
-    )
-
-  standard_girafe(plot, width_svg = 8, height_svg = 6.4)
-}
-
 # Build a county or sub-county climate choropleth.
 # - `focus_bounds` (optional numeric xmin/ymin/xmax/ymax) zooms the map to a
 #   selected county while keeping the national fill for context.
 # - `detail_sf` (optional sf) draws uncoloured internal unit outlines (sub-
 #   counties or wards) inside the focused county. These are reference only;
 #   `detail_name` is the label column used on hover.
+#' Draw a climate choropleth with the ggiraph renderer
+#'
+#' @param map_sf County or ADM2 polygons with their selected-month
+#'   measurements.
+#' @param type Indicator key for rainfall or vegetation.
+#' @param condition_view Whether to colour polygons by standardised condition.
+#' @param selected_date Observation month as a Date.
+#' @param climate_monthly Historical records used to establish the rainfall
+#'   colour scale.
+#' @param focus_bounds Optional focused bounding box.
+#' @param detail_sf Optional geographic reference outlines.
+#' @param detail_name Name of the column containing reference outline labels.
+#' @param focus_label Optional name of the focused county.
+#' @param area_level Geographic level of the shaded values.
+#' @return An interactive ggiraph map showing climate measurements and optional
+#'   reference outlines.
+#' @noRd
 climate_map_plot <- function(
   map_sf,
   type,

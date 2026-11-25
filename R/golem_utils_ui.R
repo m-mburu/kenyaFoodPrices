@@ -72,6 +72,12 @@ list_to_p <- function(list, class = NULL) {
   }
 }
 
+#' Display a named list as labelled HTML items
+#'
+#' @param list Named list whose names label the entries.
+#' @param class Optional CSS class for the list items.
+#' @return A Shiny tag list of labelled list items.
+#' @noRd
 #' @importFrom shiny tags tagAppendAttributes tagList
 named_to_li <- function(list, class = NULL) {
   if (is.null(class)) {
@@ -133,11 +139,11 @@ tagRemoveAttributes <- function(tag, ...) {
   tag
 }
 
-#' Hide or display a tag
+#' Hide a tag through its inline display style
 #'
 #' @param tag the tag
 #'
-#' @return a tag
+#' @return A tag with an inline display-none declaration.
 #' @noRd
 #'
 #' @examples
@@ -163,6 +169,11 @@ undisplay <- function(tag) {
   tag
 }
 
+#' Restore a tag hidden through its inline display style
+#'
+#' @param tag Shiny tag to restore.
+#' @return The tag with its inline display-none declaration removed.
+#' @noRd
 #' @importFrom shiny tagList
 display <- function(tag) {
   if (
@@ -180,7 +191,8 @@ display <- function(tag) {
 
 #' Hide an elements by calling jquery hide on it
 #'
-#' @param id the id of the element to hide
+#' @param id The ID of the element to hide.
+#' @return A script tag that hides the named element in the browser.
 #'
 #' @noRd
 #'
@@ -247,52 +259,85 @@ enurl <- function(url, text) {
   tags$a(href = url, text)
 }
 
-#' Columns wrappers
+#' Build a Shiny column spanning 12 grid units
 #'
-#' These are convenient wrappers around
-#' `column(12, ...)`, `column(6, ...)`, `column(4, ...)`...
-#'
+#' @param ... Content and other arguments forwarded to shiny::column().
+#' @return A Shiny grid column.
 #' @noRd
-#'
 #' @importFrom shiny column
 col_12 <- function(...) {
   column(12, ...)
 }
 
+#' Build a Shiny column spanning 10 grid units
+#'
+#' @param ... Content and other arguments forwarded to shiny::column().
+#' @return A Shiny grid column.
+#' @noRd
 #' @importFrom shiny column
 col_10 <- function(...) {
   column(10, ...)
 }
 
+#' Build a Shiny column spanning 8 grid units
+#'
+#' @param ... Content and other arguments forwarded to shiny::column().
+#' @return A Shiny grid column.
+#' @noRd
 #' @importFrom shiny column
 col_8 <- function(...) {
   column(8, ...)
 }
 
+#' Build a Shiny column spanning 6 grid units
+#'
+#' @param ... Content and other arguments forwarded to shiny::column().
+#' @return A Shiny grid column.
+#' @noRd
 #' @importFrom shiny column
 col_6 <- function(...) {
   column(6, ...)
 }
 
 
+#' Build a Shiny column spanning 4 grid units
+#'
+#' @param ... Content and other arguments forwarded to shiny::column().
+#' @return A Shiny grid column.
+#' @noRd
 #' @importFrom shiny column
 col_4 <- function(...) {
   column(4, ...)
 }
 
 
+#' Build a Shiny column spanning 3 grid units
+#'
+#' @param ... Content and other arguments forwarded to shiny::column().
+#' @return A Shiny grid column.
+#' @noRd
 #' @importFrom shiny column
 col_3 <- function(...) {
   column(3, ...)
 }
 
 
+#' Build a Shiny column spanning 2 grid units
+#'
+#' @param ... Content and other arguments forwarded to shiny::column().
+#' @return A Shiny grid column.
+#' @noRd
 #' @importFrom shiny column
 col_2 <- function(...) {
   column(2, ...)
 }
 
 
+#' Build a Shiny column spanning 1 grid units
+#'
+#' @param ... Content and other arguments forwarded to shiny::column().
+#' @return A Shiny grid column.
+#' @noRd
 #' @importFrom shiny column
 col_1 <- function(...) {
   column(1, ...)

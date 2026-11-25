@@ -71,6 +71,8 @@ filters_module_server <- function(id, food_prices = app_food_prices()) {
     })
 
     # Updates use local IDs: the module session adds its namespace.
+    # Climate can request a county by name or clear the focus with All.
+    # Send a widget update only when the requested county changes.
     set_county <- function(county) {
       if (!identical(shiny::isolate(input$page1_county), county)) {
         # Climate can focus a county without matching price observations.
@@ -104,6 +106,13 @@ filters_module_server <- function(id, food_prices = app_food_prices()) {
 }
 
 # Reset dependent widgets through the module session, preserving defaults.
+#' Restore the filter controls to their initial selections
+#'
+#' @param session Session for the namespaced controls.
+#' @param food_prices Observation-level prices from which to derive the initial
+#'   choices.
+#' @return Sends input updates to the filter module session.
+#' @noRd
 reset_filter_inputs <- function(session, food_prices) {
   defaults <- filter_initial_state(food_prices)
   records <- food_prices[

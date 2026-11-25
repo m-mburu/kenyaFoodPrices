@@ -9,9 +9,9 @@ line_plot_prices(mean_prices, commodity, pricetype)
 \arguments{
 \item{mean_prices}{A data frame containing `year_quarter_date` and `mean_price`.}
 
-\item{commodity}{The commodity to filter the data by.}
+\item{commodity}{Commodity name for the plot title.}
 
-\item{pricetype}{The price type to filter the data by.}
+\item{pricetype}{Retail or wholesale price type for the plot title.}
 }
 \value{
 A plotly object containing the line plot.

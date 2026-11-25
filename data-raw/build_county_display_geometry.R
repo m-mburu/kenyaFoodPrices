@@ -1,7 +1,11 @@
-# Build the simplified county layer used by national display maps.
-#
-# Run after data/kenya_counties_gadm.rda exists. Requires sf and Python
-# Shapely >= 2.1 at build time; the app uses only the generated R data file.
+#' Build the simplified county layer used by national maps
+#'
+#' Run from the package root after preparing the GADM county data. Requires
+#' sf and Python with Shapely >= 2.1. Checks that simplification retains the
+#' county identifiers and produces usable polygons.
+#'
+#' @return Writes data/kenya_counties_display.rda.
+#' @noRd
 
 source_file <- file.path("data", "kenya_counties_gadm.rda")
 output_file <- file.path("data", "kenya_counties_display.rda")

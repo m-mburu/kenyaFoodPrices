@@ -1,3 +1,12 @@
+#' Prepare Kenya's GADM administrative layers for the package
+#'
+#' Run from the package root. Uses the saved GeoPackage when available.
+#' KFP_FORCE_GADM_DOWNLOAD=true forces a fresh download and rebuild.
+#'
+#' @return Writes county polygons and full and simplified local reference
+#'   polygons under data/.
+#' @noRd
+
 ## Download and prepare GADM (4.1) Kenya admin boundaries.
 ##
 ## Purpose
@@ -43,6 +52,15 @@ output_files <- file.path("data", paste0(unname(gadm_levels), ".rda"))
 
 # Helper: read, repair and save one admin level ------------------------------
 
+#' Prepare and save one Kenya GADM boundary layer
+#'
+#' @param raw_file Path to the Kenya GADM GeoPackage.
+#' @param layer GeoPackage layer name for the administrative level.
+#' @param object_name Name for the saved R object and file stem.
+#' @param gadm_version GADM release identifier recorded with the data.
+#' @param gadm_url Source URL recorded in the output metadata.
+#' @return Writes the named layer under data/ and reports where it was saved.
+#' @noRd
 prepare_level <- function(raw_file, layer, object_name, gadm_version, gadm_url) {
   # Layer names look like "ADM_ADM_1"; the admin level is the trailing digit.
   level_number <- sub(".*_([0-9]+)$", "\\1", layer)
@@ -94,6 +112,14 @@ prepare_level <- function(raw_file, layer, object_name, gadm_version, gadm_url) 
 # We project to EPSG:21037 (Arc 1960 / UTM zone 37S, metres), simplify, repair,
 # drop any geometry emptied by simplification, then return to EPSG:4326 for the
 # web maps. Output stays a data.frame with sf geometry named `geometry`.
+#' Simplify an administrative boundary layer for display
+#'
+#' @param boundaries Input sf boundaries with a defined coordinate system.
+#' @param d_tolerance_m Simplification tolerance in metres in the projected
+#'   coordinate system.
+#' @return An sf object in WGS84 with repaired multipolygons. Empty geometries
+#'   are removed.
+#' @noRd
 simplify_boundaries <- function(boundaries, d_tolerance_m = 500) {
   projected <- st_transform(boundaries, 21037)
   simplified <- st_simplify(projected, preserveTopology = TRUE, dTolerance = d_tolerance_m)

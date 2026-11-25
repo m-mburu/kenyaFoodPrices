@@ -7,6 +7,7 @@ test_that("the app UI exposes calculation and accessibility contracts", {
   expect_match(markup, "Skip to main content")
   expect_match(markup, "main-content")
   expect_match(markup, "aria-live")
+  expect_no_match(markup, 'data-value="Map"')
 })
 
 test_that("visualizations use responsive frames instead of fixed pixel heights", {
@@ -62,7 +63,7 @@ test_that("trends page leads with one chart and optional detail", {
 test_that("trend period helpers keep explicit labels and safe percentages", {
   trend <- data.table::data.table(
     period = as.Date(c("2026-01-01", "2026-04-01")),
-    mean_price = c(100, 125),
+    price_estimate = c(100, 125),
     covered_months = c(2L, 3L)
   )
 
@@ -85,14 +86,14 @@ test_that("quarterly points average observed months and keep empty gaps", {
     year_month_date = as.Date(c(
       "2026-01-01", "2026-03-01", "2026-04-01", "2026-07-01"
     )),
-    mean_price = c(100, 200, NA_real_, 400),
+    price_estimate = c(100, 200, NA_real_, 400),
     observations = c(1L, 2L, NA_integer_, 3L),
     counties = c(1L, 2L, NA_integer_, 1L),
     markets = c(1L, 2L, NA_integer_, 1L)
   )
 
   result <- quarterly_trend_data(monthly)
-  expect_equal(result$mean_price, c(150, NA_real_, 400))
+  expect_equal(result$price_estimate, c(150, NA_real_, 400))
   expect_equal(result$covered_months, c(2L, 0L, 1L))
   expect_true(is.na(result$counties[2L]))
   expect_true(is.na(result$markets[2L]))

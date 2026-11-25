@@ -1,5 +1,11 @@
-# Prepare OCHA COD ADM2 boundaries that match JMR climate P-codes.
-# Run after data-raw/climate_dataset.R from the package root.
+#' Prepare COD sub-county polygons that match the JMR climate records
+#'
+#' Run from the package root after data-raw/climate_dataset.R. Downloads
+#' the OCHA archive, or reads the local archive named in KFP_COD_ARCHIVE.
+#' Checks that the geometry keys match the packaged climate lookup.
+#'
+#' @return Writes data/kenya_subcounties_cod.rda.
+#' @noRd
 
 library(sf)
 

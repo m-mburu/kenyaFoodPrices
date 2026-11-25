@@ -1,5 +1,10 @@
 # Climate data helpers ------------------------------------------------------
 
+#' Average available values within a group
+#'
+#' @param x Numeric observations in a common unit.
+#' @return A numeric mean, or NA when no values are available.
+#' @noRd
 mean_or_na <- function(x) {
   if (!length(x) || all(is.na(x))) {
     return(NA_real_)
@@ -8,6 +13,12 @@ mean_or_na <- function(x) {
   mean(x, na.rm = TRUE)
 }
 
+#' Create county-name keys for matching climate and geometry records
+#'
+#' @param x County names to normalise.
+#' @return Lower-case keys with a trailing county or city label and punctuation
+#'   removed.
+#' @noRd
 normalise_county_name <- function(x) {
   value <- tolower(trimws(as.character(x)))
   value <- sub("\\s+county$", "", value)
@@ -15,6 +26,13 @@ normalise_county_name <- function(x) {
   gsub("[^a-z0-9]", "", value)
 }
 
+#' Standardise values within a comparable reference group
+#'
+#' @param x Numeric measurements from one reference group.
+#' @return A numeric vector aligned to x. Non-finite inputs and groups with
+#'   fewer than two finite values yield NA. Finite values in a constant group
+#'   receive zero.
+#' @noRd
 safe_zscore <- function(x) {
   result <- rep(NA_real_, length(x))
   valid <- is.finite(x)
@@ -33,6 +51,12 @@ safe_zscore <- function(x) {
   result
 }
 
+#' Classify a standardised climate measurement
+#'
+#' @param z Standardised rainfall or NDVI scores, in standard deviations.
+#' @return One condition label per score. Missing and non-finite scores are
+#'   labelled Not available.
+#' @noRd
 climate_condition <- function(z) {
   result <- rep("Not available", length(z))
   valid <- is.finite(z)
@@ -44,6 +68,17 @@ climate_condition <- function(z) {
   result
 }
 
+#' Harmonise raw JMR climate records with the COD area lookup
+#'
+#' @param jmr_data Raw Kenya JMR indicator records in a supported long or wide
+#'   format.
+#' @param pcodes ADM2-to-county code and name lookup from the same source
+#'   release.
+#' @return A data.table ordered by month and area, with physical rainfall and
+#'   NDVI values and standardised scores. Wide-file scores use each ADM2 and
+#'   calendar month as the reference group. Long-file scores retain the
+#'   supplied indicator values.
+#' @noRd
 prepare_jmr_climate <- function(jmr_data, pcodes) {
   long_fields <- c("adm2_pcode", "date", "indicator", "grouping", "value")
   wide_fields <- c(
@@ -137,6 +172,13 @@ prepare_jmr_climate <- function(jmr_data, pcodes) {
   climate[]
 }
 
+#' Summarise monthly ADM2 climate measurements within counties
+#'
+#' @param climate_adm2 ADM2-month data with dates, COD identifiers and physical
+#'   and standardised rainfall and NDVI values.
+#' @return One row per county-month, with an unweighted mean of available ADM2
+#'   values per measure and counts of all and complete sub-counties.
+#' @noRd
 aggregate_climate_to_county <- function(climate_adm2) {
   climate <- data.table::as.data.table(climate_adm2)
   required <- c(
@@ -166,6 +208,15 @@ aggregate_climate_to_county <- function(climate_adm2) {
   result[]
 }
 
+#' Measure how climate conditions relate to subsequent price changes
+#'
+#' @param data A monthly table containing date, price_change, rainfall_z and
+#'   ndvi_z. Keep missing months in the calendar so row shifts represent
+#'   months.
+#' @param max_lag Largest number of months by which climate can lead prices.
+#' @return One row per indicator and lag with the Spearman correlation and
+#'   complete-pair count. Fewer than 12 pairs yield NA.
+#' @noRd
 lagged_climate_correlations <- function(data, max_lag = 6L) {
   dt <- data.table::as.data.table(data)
   required <- c("date", "price_change", "rainfall_z", "ndvi_z")

@@ -1,6 +1,7 @@
 #' Climate dashboard UI
 #'
 #' @param id Module identifier.
+#' @return A namespaced dashboard fragment with climate maps and analysis.
 #' @importFrom DT DTOutput
 #' @importFrom ggiraph girafeOutput
 #' @importFrom plotly plotlyOutput
@@ -129,6 +130,13 @@ climate_module_ui <- function(id) {
   )
 }
 
+#' Attach JMR county codes to national display polygons
+#'
+#' @param counties County polygons with names and geometry.
+#' @param county_lookup Table of normalised county names and ADM1 codes.
+#' @return WGS84 sf polygons with matched ADM1 codes. An unmatched county name
+#'   stops preparation.
+#' @noRd
 prepare_climate_geometry <- function(counties, county_lookup) {
   counties_copy <- data.table::copy(counties)
   counties_sf <- sf::st_as_sf(counties_copy, sf_column_name = "geometry")
@@ -146,6 +154,13 @@ prepare_climate_geometry <- function(counties, county_lookup) {
   counties_sf
 }
 
+#' Resolve a selected county name to its climate ID
+#'
+#' @param county_name Selected county name or All.
+#' @param county_lookup Table of normalised county names and ADM1 codes.
+#' @return One ADM1 code, All for the national selection, or NA for an
+#'   unmatched name.
+#' @noRd
 county_pcode_for_name <- function(county_name, county_lookup) {
   if (identical(county_name, "All")) {
     return("All")
@@ -155,6 +170,14 @@ county_pcode_for_name <- function(county_name, county_lookup) {
   county_lookup[county_key == target_key, adm1_pcode][1L]
 }
 
+#' Join one county's monthly climate observations to COD polygons
+#'
+#' @param boundaries COD polygons with parent county and ADM2 codes.
+#' @param values ADM2 observations for the selected month.
+#' @param county_code ADM1 code of the focused county.
+#' @return The selected county's polygons with measured values and condition
+#'   labels. Duplicate observation IDs or unmatched area sets cause an error.
+#' @noRd
 prepare_subcounty_map_values <- function(boundaries, values, county_code) {
   polygons <- boundaries[
     boundaries$adm1_pcode == county_code,
@@ -182,6 +205,11 @@ prepare_subcounty_map_values <- function(boundaries, values, county_code) {
 #' @param price_data Reactive returning filtered food-price records.
 #' @param price_column Reactive returning the active price column name.
 #' @param price_unit_label Reactive returning a display unit for prices.
+#' @param global_county Optional reactive returning the shared county choice.
+#' @param set_global_county Optional function to update the shared county.
+#' @param reset_focus Optional reactive event indicating a global filter reset.
+#' @param active Optional reactive indicating whether the Climate tab is active.
+#' @return Registers session-local map, summary and climate-price outputs.
 #' @importFrom ggiraph renderGirafe
 #' @importFrom plotly layout plot_ly renderPlotly
 #' @importFrom shiny HTML moduleServer need observe observeEvent reactive renderUI req updateSelectInput validate
@@ -420,6 +448,7 @@ climate_module_server <- function(
       )
     }
 
+    # Apply the clicked ADM1 code to both controls when the county changes.
     select_clicked_county <- function(selected) {
       if (length(selected) != 1L ||
           !selected %in% county_lookup$adm1_pcode ||

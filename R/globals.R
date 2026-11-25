@@ -1,8 +1,14 @@
+#' Declare names used in data.table, ggplot2 and widget expressions
+#'
+#' These declarations help package checks recognise columns resolved from data
+#' at runtime.
+#' @noRd
 utils::globalVariables(c(
   ".",
   "Average Price",
   "County",
   "Counties",
+  "Estimate",
   "First Date",
   "Latest Date",
   "Market",
@@ -32,7 +38,7 @@ utils::globalVariables(c(
   "commodity_point_id",
   "calendar_year",
   "annual_mean",
-  "avg_price",
+  "price_estimate",
   "adm1_name",
   "adm1_pcode",
   "adm2_name",
@@ -46,6 +52,9 @@ utils::globalVariables(c(
   "county_key",
   "county_price",
   "date",
+  "first_date",
+  "latest_date",
+  "latest_month",
   "display_value",
   "driver",
   "grouping",
@@ -54,8 +63,6 @@ utils::globalVariables(c(
   "kenya_climate",
   "kenya_counties",
   "lag_months",
-  "latitude",
-  "longitude",
   "market",
   "map_tooltip",
   "mean_price",

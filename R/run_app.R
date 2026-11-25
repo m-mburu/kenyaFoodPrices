@@ -3,6 +3,8 @@
 #' @param ... arguments to pass to golem_opts.
 #' See `?golem::get_golem_options` for more details.
 #' @inheritParams shiny::shinyApp
+#' @return A Shiny application object configured with the dashboard UI and
+#'   server.
 #'
 #' @export
 #' @importFrom shiny shinyApp
